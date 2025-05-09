@@ -34,7 +34,8 @@ export const useComparisonData = (comparisonType: ComparisonPeriod): ComparisonD
     if (comparisonType === 'period') {
       // Shift back by the same duration
       previousTo = new Date(currentFrom);
-      previousFrom = new Date(currentFrom.getTime() - durationMs);
+      previousTo.setTime(previousTo.getTime() - 1); // Subtract 1ms to avoid overlap
+      previousFrom = new Date(previousTo.getTime() - durationMs);
     } else {
       // Shift back by 1 year
       previousFrom = new Date(currentFrom);

@@ -21,55 +21,60 @@ interface ComparisonChartProps {
   metric?: 'impressions' | 'downloads' | 'pageViews';
 }
 
+/**
+ * Utility function to merge current and previous data series
+ * with proper date alignment
+ */
+export const mergeSeries = (currentData: TimeSeriesPoint[], previousData: TimeSeriesPoint[], metric: string) => {
+  const dateMap = new Map();
+  
+  // Format and add current data to map
+  currentData.forEach(item => {
+    const dateStr = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    dateMap.set(dateStr, { 
+      date: dateStr,
+      current: item[metric as keyof TimeSeriesPoint] as number,
+    });
+  });
+  
+  // Add previous data to map
+  previousData.forEach(item => {
+    const dateStr = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const existing = dateMap.get(dateStr);
+    
+    if (existing) {
+      dateMap.set(dateStr, { 
+        ...existing, 
+        previous: item[metric as keyof TimeSeriesPoint] as number,
+      });
+    } else {
+      dateMap.set(dateStr, { 
+        date: dateStr,
+        previous: item[metric as keyof TimeSeriesPoint] as number,
+      });
+    }
+  });
+  
+  // Convert map to array and sort by date
+  return Array.from(dateMap.values()).sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateA.getTime() - dateB.getTime();
+  });
+};
+
 const ComparisonChart: React.FC<ComparisonChartProps> = React.memo(({ 
   currentData,
   previousData,
   title = "Comparison",
   metric = 'downloads'
 }) => {
-  // Format the data for display
-  const formattedCurrentData = currentData.map(item => ({
-    ...item,
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    [`current_${metric}`]: item[metric]
-  }));
-  
-  const formattedPreviousData = previousData.map(item => ({
-    ...item,
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    [`previous_${metric}`]: item[metric]
-  }));
-  
-  // Create a mapping dictionary for dates
-  const dateMap = new Map();
-  formattedCurrentData.forEach(item => {
-    dateMap.set(item.date, { 
-      date: item.date, 
-      [`current_${metric}`]: item[`current_${metric}`] 
-    });
-  });
-  
-  // Merge previous data into the dictionary
-  formattedPreviousData.forEach(item => {
-    if (dateMap.has(item.date)) {
-      dateMap.set(item.date, { 
-        ...dateMap.get(item.date), 
-        [`previous_${metric}`]: item[`previous_${metric}`] 
-      });
-    } else {
-      dateMap.set(item.date, { 
-        date: item.date, 
-        [`previous_${metric}`]: item[`previous_${metric}`] 
-      });
-    }
-  });
-  
-  // Convert the map to an array
-  const combinedData = Array.from(dateMap.values());
+  // Merge the data series
+  const mergedData = mergeSeries(currentData, previousData, metric);
   
   const chartConfig = {
-    [`current_${metric}`]: { color: "#3b82f6" }, // blue for current
-    [`previous_${metric}`]: { color: "#8b5cf6" }  // purple for previous
+    current: { color: "#3b82f6" }, // blue for current
+    previous: { color: "#8b5cf6" }  // purple for previous
   };
   
   return (
@@ -91,7 +96,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = React.memo(({
         
         <div className="h-64 w-full">
           <ChartContainer config={chartConfig}>
-            <LineChart data={combinedData}>
+            <LineChart data={mergedData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#444" />
               <XAxis 
                 dataKey="date"
@@ -109,7 +114,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = React.memo(({
               <Legend />
               <Line 
                 type="monotone" 
-                dataKey={`current_${metric}`}
+                dataKey="current"
                 name="Current"
                 stroke="#3b82f6"
                 strokeWidth={2}
@@ -118,7 +123,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = React.memo(({
               />
               <Line 
                 type="monotone" 
-                dataKey={`previous_${metric}`}
+                dataKey="previous"
                 name="Previous"
                 stroke="#8b5cf6"
                 strokeWidth={2}
