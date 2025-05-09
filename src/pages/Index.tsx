@@ -38,10 +38,11 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700"
-                as={Link}
-                to={session ? "/dashboard" : "/auth/sign-in"}
+                asChild
               >
-                View Analytics
+                <Link to={session ? "/dashboard" : "/auth/sign-in"}>
+                  View Analytics
+                </Link>
               </Button>
             </CardFooter>
           </Card>
@@ -62,10 +63,11 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700"
-                as={Link}
-                to={session ? "/dashboard" : "/auth/sign-in"}
+                asChild
               >
-                Research Keywords
+                <Link to={session ? "/dashboard" : "/auth/sign-in"}>
+                  Research Keywords
+                </Link>
               </Button>
             </CardFooter>
           </Card>
@@ -86,10 +88,11 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700"
-                as={Link}
-                to={session ? "/traffic-sources" : "/auth/sign-in"}
+                asChild
               >
-                Analyze Competitors
+                <Link to={session ? "/traffic-sources" : "/auth/sign-in"}>
+                  Analyze Competitors
+                </Link>
               </Button>
             </CardFooter>
           </Card>
@@ -97,23 +100,23 @@ const Index = () => {
         
         <div className="text-center">
           {session ? (
-            <Link to="/dashboard">
-              <Button className="bg-white text-zinc-900 hover:bg-zinc-200">
+            <Button asChild>
+              <Link to="/dashboard" className="bg-white text-zinc-900 hover:bg-zinc-200">
                 Go to Dashboard
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           ) : (
             <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/auth/sign-in">
-                <Button className="bg-white text-zinc-900 hover:bg-zinc-200">
+              <Button asChild>
+                <Link to="/auth/sign-in" className="bg-white text-zinc-900 hover:bg-zinc-200">
                   Sign In
-                </Button>
-              </Link>
-              <Link to="/auth/sign-up">
-                <Button variant="outline" className="border-white text-white hover:bg-zinc-800">
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/auth/sign-up" className="border-white text-white hover:bg-zinc-800">
                   Create Account
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           )}
         </div>
