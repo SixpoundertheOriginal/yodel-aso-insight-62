@@ -1,13 +1,88 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from "react";
+import MainLayout from "../layouts/MainLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <MainLayout>
+      <div className="py-10">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            YodelMobile ASO Tool
+          </h1>
+          <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+            Optimize your app's visibility and increase downloads with our powerful App Store Optimization platform.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <Card className="bg-zinc-800 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-white">App Analytics</CardTitle>
+              <CardDescription className="text-zinc-400">
+                Track your app's performance metrics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-zinc-300">
+                Monitor downloads, visibility, and user engagement with comprehensive analytics dashboards.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700">
+                View Analytics
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card className="bg-zinc-800 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-white">Keyword Research</CardTitle>
+              <CardDescription className="text-zinc-400">
+                Find the best keywords for your app
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-zinc-300">
+                Discover high-performing keywords to increase your app's visibility in the app stores.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700">
+                Research Keywords
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card className="bg-zinc-800 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-white">Competitor Analysis</CardTitle>
+              <CardDescription className="text-zinc-400">
+                Stay ahead of your competition
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-zinc-300">
+                Track competitor rankings, keywords, and strategies to optimize your market position.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700">
+                Analyze Competitors
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+        
+        <div className="text-center">
+          <Button className="bg-white text-zinc-900 hover:bg-zinc-200">
+            Get Started
+          </Button>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
