@@ -8,3 +8,4 @@ export { default as DatePicker } from './DatePicker';
 export { default as ResetButton } from './ResetButton';
 export { default as KpiCard } from './KpiCard';
 export { default as LineChartPlaceholder } from './LineChartPlaceholder';
+export { default as TrafficSourceTable } from './TrafficSourceTable';
