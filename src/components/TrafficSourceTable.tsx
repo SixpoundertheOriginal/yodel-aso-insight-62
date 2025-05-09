@@ -43,6 +43,12 @@ const TrafficSourceTable: React.FC<TrafficSourceTableProps> = React.memo(({ data
     });
   }, [data, sortField, sortDirection]);
 
+  // Convert our internal sort direction to HTML aria-sort value
+  const getAriaSortValue = (field: SortField): "ascending" | "descending" | "none" => {
+    if (field !== sortField) return "none";
+    return sortDirection === 'asc' ? "ascending" : "descending";
+  };
+
   return (
     <Table className="w-full">
       <TableHeader>
@@ -51,7 +57,7 @@ const TrafficSourceTable: React.FC<TrafficSourceTableProps> = React.memo(({ data
             className="cursor-pointer w-1/3" 
             onClick={() => handleSort('name')}
             role="columnheader"
-            aria-sort={sortField === 'name' ? sortDirection : 'none'}
+            aria-sort={getAriaSortValue('name')}
           >
             <div className="flex items-center">
               Source
@@ -64,7 +70,7 @@ const TrafficSourceTable: React.FC<TrafficSourceTableProps> = React.memo(({ data
             className="cursor-pointer text-right"
             onClick={() => handleSort('value')}
             role="columnheader"
-            aria-sort={sortField === 'value' ? sortDirection : 'none'}
+            aria-sort={getAriaSortValue('value')}
           >
             <div className="flex items-center justify-end">
               Value
@@ -77,7 +83,7 @@ const TrafficSourceTable: React.FC<TrafficSourceTableProps> = React.memo(({ data
             className="cursor-pointer text-right"
             onClick={() => handleSort('delta')}
             role="columnheader"
-            aria-sort={sortField === 'delta' ? sortDirection : 'none'}
+            aria-sort={getAriaSortValue('delta')}
           >
             <div className="flex items-center justify-end">
               Change
