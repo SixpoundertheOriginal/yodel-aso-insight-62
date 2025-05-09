@@ -3,8 +3,12 @@ import React from "react";
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const Index = () => {
+  const { session } = useAuth();
+  
   return (
     <MainLayout>
       <div className="py-10">
@@ -31,7 +35,12 @@ const Index = () => {
               </p>
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700">
+              <Button 
+                variant="outline" 
+                className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                as={Link}
+                to={session ? "/dashboard" : "/auth/sign-in"}
+              >
                 View Analytics
               </Button>
             </CardFooter>
@@ -50,7 +59,12 @@ const Index = () => {
               </p>
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700">
+              <Button 
+                variant="outline" 
+                className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                as={Link}
+                to={session ? "/dashboard" : "/auth/sign-in"}
+              >
                 Research Keywords
               </Button>
             </CardFooter>
@@ -69,7 +83,12 @@ const Index = () => {
               </p>
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700">
+              <Button 
+                variant="outline" 
+                className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                as={Link}
+                to={session ? "/traffic-sources" : "/auth/sign-in"}
+              >
                 Analyze Competitors
               </Button>
             </CardFooter>
@@ -77,9 +96,26 @@ const Index = () => {
         </div>
         
         <div className="text-center">
-          <Button className="bg-white text-zinc-900 hover:bg-zinc-200">
-            Get Started
-          </Button>
+          {session ? (
+            <Link to="/dashboard">
+              <Button className="bg-white text-zinc-900 hover:bg-zinc-200">
+                Go to Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link to="/auth/sign-in">
+                <Button className="bg-white text-zinc-900 hover:bg-zinc-200">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/auth/sign-up">
+                <Button variant="outline" className="border-white text-white hover:bg-zinc-800">
+                  Create Account
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>
