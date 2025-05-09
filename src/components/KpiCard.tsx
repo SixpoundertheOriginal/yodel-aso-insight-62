@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import { formatPercentage } from "@/utils/format";
 
 interface KpiCardProps {
   title: string;
@@ -28,7 +29,7 @@ const KpiCard: React.FC<KpiCardProps> = React.memo(({
             ) : (
               <ArrowDown className="h-4 w-4 mr-1" />
             )}
-            <span>{Math.abs(delta)}%</span>
+            <span>{formatPercentage(Math.abs(delta))}%</span>
           </div>
         </div>
       </CardContent>
