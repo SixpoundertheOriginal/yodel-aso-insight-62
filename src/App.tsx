@@ -8,6 +8,7 @@ import { AsoDataProvider } from "./context/AsoDataContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/dashboard";
 import TrafficSourcesPage from "./pages/traffic-sources";
+import ConversionAnalysisPage from "./pages/conversion-analysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/traffic-sources" element={<TrafficSourcesPage />} />
+            <Route path="/conversion-analysis" element={<ConversionAnalysisPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
