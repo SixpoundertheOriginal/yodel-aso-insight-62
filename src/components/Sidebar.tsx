@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { ChartBarIcon, ArrowTrendingUpIcon, ArrowUturnDownIcon } from "lucide-react";
+import { BarChart, TrendingUp, ArrowDown } from "lucide-react";
 
 const Sidebar: React.FC = React.memo(() => {
   return (
@@ -11,18 +11,18 @@ const Sidebar: React.FC = React.memo(() => {
         <nav className="space-y-1">
           <SidebarItem 
             href="/dashboard" 
-            icon={<ChartBarIcon className="w-5 h-5" />} 
+            icon={<BarChart className="w-5 h-5" />} 
             label="Store Performance" 
             isActive
           />
           <SidebarItem 
             href="/traffic-sources" 
-            icon={<ArrowTrendingUpIcon className="w-5 h-5" />} 
+            icon={<TrendingUp className="w-5 h-5" />} 
             label="Traffic Sources" 
           />
           <SidebarItem 
             href="/conversion-analysis" 
-            icon={<ArrowUturnDownIcon className="w-5 h-5" />} 
+            icon={<ArrowDown className="w-5 h-5" />} 
             label="Conversion Analysis" 
           />
         </nav>
