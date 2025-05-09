@@ -1,0 +1,118 @@
+
+import { useState, useEffect } from 'react';
+
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
+
+export interface MetricSummary {
+  value: number;
+  delta: number; // percentage change
+}
+
+export interface AsoMetrics {
+  impressions: MetricSummary;
+  downloads: MetricSummary;
+  pageViews: MetricSummary;
+  cvr: MetricSummary;
+}
+
+export interface TrafficSource {
+  name: string;
+  value: number;
+  delta: number;
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  impressions: number;
+  downloads: number;
+  pageViews: number;
+}
+
+export interface AsoData {
+  summary: AsoMetrics;
+  timeseriesData: TimeSeriesPoint[];
+  trafficSources: TrafficSource[];
+}
+
+export const useMockAsoData = (
+  clientList: string[],
+  dateRange: DateRange,
+  trafficSources: string[]
+): { data: AsoData | null; loading: boolean; error: Error | null } => {
+  const [data, setData] = useState<AsoData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const generateMockData = async () => {
+      try {
+        setLoading(true);
+        
+        // Generate random values for metrics
+        const generateMetric = (): MetricSummary => {
+          const value = Math.floor(Math.random() * 99000) + 1000; // 1k to 100k
+          const delta = (Math.random() * 40) - 20; // -20% to +20%
+          return { value, delta };
+        };
+        
+        // Generate summary metrics
+        const summary: AsoMetrics = {
+          impressions: generateMetric(),
+          downloads: generateMetric(),
+          pageViews: generateMetric(),
+          cvr: { 
+            value: parseFloat((Math.random() * 10).toFixed(2)), // 0 to 10%
+            delta: parseFloat((Math.random() * 40 - 20).toFixed(1)) // -20% to +20%
+          }
+        };
+        
+        // Generate timeseries data for the last 30 days
+        const timeseriesData: TimeSeriesPoint[] = [];
+        const endDate = dateRange.to;
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 29); // 30 days including the end date
+        
+        for (let i = 0; i < 30; i++) {
+          const currentDate = new Date(startDate);
+          currentDate.setDate(startDate.getDate() + i);
+          
+          timeseriesData.push({
+            date: currentDate.toISOString().split('T')[0],
+            impressions: Math.floor(Math.random() * 5000) + 500,
+            downloads: Math.floor(Math.random() * 1000) + 100,
+            pageViews: Math.floor(Math.random() * 3000) + 300,
+          });
+        }
+        
+        // Generate traffic source data
+        const trafficSourceData: TrafficSource[] = trafficSources.map((source) => ({
+          name: source,
+          value: Math.floor(Math.random() * 50000) + 5000,
+          delta: parseFloat((Math.random() * 40 - 20).toFixed(1))
+        }));
+        
+        const mockData: AsoData = {
+          summary,
+          timeseriesData,
+          trafficSources: trafficSourceData
+        };
+        
+        // Simulate API delay
+        setTimeout(() => {
+          setData(mockData);
+          setLoading(false);
+        }, 800);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+        setLoading(false);
+      }
+    };
+    
+    generateMockData();
+  }, [clientList, dateRange.from, dateRange.to, trafficSources]);
+  
+  return { data, loading, error };
+};
