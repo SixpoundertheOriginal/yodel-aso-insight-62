@@ -1,6 +1,9 @@
 
 import { formatPercentage } from './format';
 
+// Adding a reference to Jest types
+/// <reference types="jest" />
+
 describe('formatPercentage', () => {
   it('formats a number with one decimal place by default', () => {
     expect(formatPercentage(5.4321)).toBe('5.4');
