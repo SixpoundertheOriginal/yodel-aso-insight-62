@@ -1,179 +1,101 @@
-import React, { useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-interface TimeSeriesDataPoint {
-  date: string;
-  impressions: number;
-  downloads: number;
-  pageViews: number;
-  [key: string]: any;
-}
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import ComparisonChart, { mergeSeries } from './ComparisonChart';
 
-interface ComparisonChartProps {
-  currentData: TimeSeriesDataPoint[];
-  previousData: TimeSeriesDataPoint[];
-  title: string;
-  metric: string;
-}
+describe('ComparisonChart', () => {
+  // Mock data for testing
+  const currentData = [
+    { date: '2023-01-01', downloads: 100, impressions: 500, pageViews: 300 },
+    { date: '2023-01-02', downloads: 120, impressions: 550, pageViews: 320 },
+    { date: '2023-01-03', downloads: 110, impressions: 530, pageViews: 310 }
+  ];
+  
+  const previousData = [
+    { date: '2023-01-01', downloads: 90, impressions: 480, pageViews: 280 },
+    { date: '2023-01-03', downloads: 95, impressions: 490, pageViews: 290 },
+    { date: '2023-01-04', downloads: 85, impressions: 470, pageViews: 270 }
+  ];
 
-const ComparisonChart: React.FC<ComparisonChartProps> = ({ 
-  currentData, 
-  previousData, 
-  title, 
-  metric 
-}) => {
-  // Normalize and validate data to ensure no negative values
-  const processedCurrentData = useMemo(() => {
-    if (!currentData || !Array.isArray(currentData)) return [];
-    
-    return currentData.map(point => ({
-      ...point,
-      [metric]: Math.max(0, Number(point[metric] || 0)),
-      date: point.date
-    }));
-  }, [currentData, metric]);
-
-  const processedPreviousData = useMemo(() => {
-    if (!previousData || !Array.isArray(previousData)) return [];
-    
-    return previousData.map(point => ({
-      ...point,
-      [metric]: Math.max(0, Number(point[metric] || 0)),
-      date: point.date
-    }));
-  }, [previousData, metric]);
-
-  // Create a merged dataset with aligned dates for comparison
-  const mergedData = useMemo(() => {
-    if (processedCurrentData.length === 0) return [];
-    
-    // Create a map of current data points by date for easier merging
-    const currentMap = new Map(
-      processedCurrentData.map(point => [
-        point.date, 
-        { date: point.date, current: point[metric] }
-      ])
+  it('renders the chart with correct title', () => {
+    render(
+      <ComparisonChart
+        currentData={currentData}
+        previousData={previousData}
+        title="Test Chart"
+        metric="downloads"
+      />
     );
     
-    // Merge with previous data points
-    processedPreviousData.forEach(point => {
-      const matchingDate = currentMap.get(point.date);
-      if (matchingDate) {
-        matchingDate.previous = point[metric];
-      } else {
-        currentMap.set(point.date, { 
-          date: point.date, 
-          previous: point[metric],
-          current: 0 // Set to 0 if no current data exists for this date
-        });
-      }
+    expect(screen.getByText('Test Chart')).toBeInTheDocument();
+  });
+
+  it('renders both current and previous series', () => {
+    const { container } = render(
+      <ComparisonChart
+        currentData={currentData}
+        previousData={previousData}
+        title="Downloads Comparison"
+        metric="downloads"
+      />
+    );
+    
+    // Check that we have two path elements for the two lines
+    const paths = container.querySelectorAll('path.recharts-curve');
+    expect(paths.length).toBe(2);
+    
+    // One path should have a stroke-dasharray attribute (for the "Previous" dashed line)
+    const dashedPaths = Array.from(paths).filter(
+      path => path.getAttribute('stroke-dasharray')
+    );
+    expect(dashedPaths.length).toBe(1);
+  });
+
+  it('displays correct legend items', () => {
+    render(
+      <ComparisonChart
+        currentData={currentData}
+        previousData={previousData}
+        title="Downloads Comparison"
+        metric="downloads"
+      />
+    );
+    
+    // Check for legend items
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Previous')).toBeInTheDocument();
+  });
+
+  describe('mergeSeries function', () => {
+    it('correctly merges current and previous data series', () => {
+      const merged = mergeSeries(currentData, previousData, 'downloads');
+      
+      // Should have entries for all unique dates
+      expect(merged.length).toBe(4); // 01, 02, 03, 04
+      
+      // Check specific entries
+      const jan1 = merged.find(item => item.date === '2023-01-01');
+      expect(jan1).toEqual({
+        date: '2023-01-01',
+        current: 100,
+        previous: 90
+      });
+      
+      // Check date that exists only in current data
+      const jan2 = merged.find(item => item.date === '2023-01-02');
+      expect(jan2.current).toBe(120);
+      expect(jan2.previous).toBe(0); // Default value when missing
+      
+      // Check date that exists only in previous data
+      const jan4 = merged.find(item => item.date === '2023-01-04');
+      expect(jan4.current).toBe(0); // Default value when missing
+      expect(jan4.previous).toBe(85);
     });
-    
-    // Convert map back to array and sort by date
-    return Array.from(currentMap.values())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [processedCurrentData, processedPreviousData, metric]);
 
-  // Find the minimum and maximum values for proper scaling
-  const dataExtent = useMemo(() => {
-    if (mergedData.length === 0) return { min: 0, max: 100 };
-    
-    let min = Infinity;
-    let max = 0;
-    
-    mergedData.forEach(point => {
-      if (point.current !== undefined && point.current < min) min = point.current;
-      if (point.previous !== undefined && point.previous < min) min = point.previous;
-      if (point.current !== undefined && point.current > max) max = point.current;
-      if (point.previous !== undefined && point.previous > max) max = point.previous;
+    it('handles empty input arrays', () => {
+      expect(mergeSeries([], [], 'downloads')).toEqual([]);
+      expect(mergeSeries(currentData, [], 'downloads').length).toBe(3);
+      expect(mergeSeries([], previousData, 'downloads').length).toBe(3);
     });
-    
-    // Ensure min is at least 0 (no negative values)
-    min = Math.max(0, min);
-    
-    // Add some padding to the max for better visualization
-    max = max * 1.1;
-    
-    return { min, max };
-  }, [mergedData]);
-
-  // Check if we have valid data to render
-  if (!mergedData.length) {
-    return <div className="text-zinc-400 p-4 text-center">Insufficient data for comparison</div>;
-  }
-
-  // Custom tooltip to display both current and previous values
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-zinc-800 p-3 border border-zinc-700 rounded-md shadow-lg">
-          <p className="text-zinc-400 text-xs mb-1">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm font-medium">
-              {entry.name}: {entry.value.toLocaleString()}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  return (
-    <div className="bg-zinc-900 p-4 rounded-md border border-zinc-800 mb-6">
-      <h3 className="text-lg font-medium mb-4 text-zinc-200">{title}</h3>
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={mergedData}
-            margin={{
-              top: 10,
-              right: 30,
-              left: 20,
-              bottom: 10,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#444444" />
-            <XAxis 
-              dataKey="date" 
-              tick={{ fill: '#999999' }} 
-              axisLine={{ stroke: '#555555' }} 
-            />
-            <YAxis 
-              tickFormatter={(value) => value.toLocaleString()}
-              tick={{ fill: '#999999' }}
-              axisLine={{ stroke: '#555555' }}
-              domain={[dataExtent.min, dataExtent.max]} 
-              allowDataOverflow={false}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="current"
-              name="Current"
-              stroke="#3b82f6" // Blue
-              strokeWidth={2}
-              dot={{ r: 0 }}
-              activeDot={{ r: 4 }}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="previous"
-              name="Previous"
-              stroke="#8b5cf6" // Purple
-              strokeDasharray="5 5"
-              strokeWidth={2}
-              dot={{ r: 0 }}
-              activeDot={{ r: 4 }}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
-
-export default React.memo(ComparisonChart);
+  });
+});
