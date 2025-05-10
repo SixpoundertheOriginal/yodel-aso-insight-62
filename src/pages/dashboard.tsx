@@ -1,3 +1,4 @@
+
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -45,26 +46,40 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Add null/undefined checks for the summary data
+  const impressionsValue = data.summary?.impressions?.value || 0;
+  const impressionsDelta = data.summary?.impressions?.delta || 0;
+  const downloadsValue = data.summary?.downloads?.value || 0;
+  const downloadsDelta = data.summary?.downloads?.delta || 0;
+  const pageViewsValue = data.summary?.product_page_views?.value || 0;
+  const pageViewsDelta = data.summary?.product_page_views?.delta || 0;
+  const cvrValue = data.summary?.cvr?.value || 0;
+  const cvrDelta = data.summary?.cvr?.delta || 0;
+
   return (
     <MainLayout>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <KpiCard
           title="Impressions"
-          value={data.summary.impressions.value}
-          delta={data.summary.impressions.delta}
+          value={impressionsValue}
+          delta={impressionsDelta}
         />
         <KpiCard
           title="Downloads"
-          value={data.summary.downloads.value}
-          delta={data.summary.downloads.delta}
+          value={downloadsValue}
+          delta={downloadsDelta}
         />
         <KpiCard
           title="Page Views"
-          value={data.summary.product_page_views.value}
-          delta={data.summary.product_page_views.delta}
+          value={pageViewsValue}
+          delta={pageViewsDelta}
         />
-        <KpiCard title="CVR" value={data.summary.cvr.value} delta={data.summary.cvr.delta} />
+        <KpiCard 
+          title="CVR" 
+          value={cvrValue} 
+          delta={cvrDelta} 
+        />
       </div>
 
       {/* Exclude ASA Toggle */}
@@ -84,7 +99,7 @@ const Dashboard: React.FC = () => {
         <CardContent className="p-6">
           <h2 className="text-lg font-medium mb-4">Performance Metrics</h2>
           <div className="w-full h-64">
-            <TimeSeriesChart data={data.timeseriesData} />
+            {data.timeseriesData && <TimeSeriesChart data={data.timeseriesData} />}
           </div>
         </CardContent>
       </Card>
