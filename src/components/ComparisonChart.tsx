@@ -1,5 +1,6 @@
 
 import React, { useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface TimeSeriesDataPoint {
@@ -125,8 +126,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
   };
 
   return (
-    <div className="bg-zinc-900 p-4 rounded-md border border-zinc-800 mb-6">
-      <h3 className="text-lg font-medium mb-4 text-zinc-200">{title}</h3>
+    <div className="w-full">
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart

@@ -7,6 +7,7 @@ import ComparisonChart from "../components/ComparisonChart";
 import { useAsoData } from "../context/AsoDataContext";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { Toggle } from "@/components/ui/toggle";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
@@ -87,30 +88,39 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      <TimeSeriesChart title="Performance Metrics" data={data.timeseriesData} />
+      <Card className="bg-zinc-800 rounded-md mb-8">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-medium mb-4">Performance Metrics</h2>
+          <TimeSeriesChart title="Performance Metrics" data={data.timeseriesData} />
+        </CardContent>
+      </Card>
       
       {!periodComparison.loading && periodComparison.current && periodComparison.previous && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Previous Period</h2>
-          <ComparisonChart 
-            currentData={periodComparison.current.timeseriesData} 
-            previousData={periodComparison.previous.timeseriesData} 
-            title="Downloads Comparison" 
-            metric="downloads"
-          />
-        </div>
+        <Card className="bg-zinc-800 rounded-md mb-8">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-medium mb-4">Previous Period</h2>
+            <ComparisonChart 
+              currentData={periodComparison.current.timeseriesData} 
+              previousData={periodComparison.previous.timeseriesData} 
+              title="Downloads Comparison" 
+              metric="downloads"
+            />
+          </CardContent>
+        </Card>
       )}
       
       {!yearComparison.loading && yearComparison.current && yearComparison.previous && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Previous Year</h2>
-          <ComparisonChart 
-            currentData={yearComparison.current.timeseriesData} 
-            previousData={yearComparison.previous.timeseriesData} 
-            title="Downloads Comparison" 
-            metric="downloads"
-          />
-        </div>
+        <Card className="bg-zinc-800 rounded-md mb-8">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-medium mb-4">Previous Year</h2>
+            <ComparisonChart 
+              currentData={yearComparison.current.timeseriesData} 
+              previousData={yearComparison.previous.timeseriesData} 
+              title="Downloads Comparison" 
+              metric="downloads"
+            />
+          </CardContent>
+        </Card>
       )}
     </MainLayout>
   );
