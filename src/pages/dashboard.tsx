@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
       <Card className="bg-zinc-800 rounded-md mb-8">
         <CardContent className="p-6">
           <h2 className="text-lg font-medium mb-4">Performance Metrics</h2>
-          <div className="w-full h-64">
+          <div className="relative w-full h-64">
             {data.timeseriesData && <TimeSeriesChart data={data.timeseriesData} />}
           </div>
         </CardContent>
@@ -111,7 +111,7 @@ const Dashboard: React.FC = () => {
           <Card className="bg-zinc-800 rounded-md mb-8">
             <CardContent className="p-6">
               <h2 className="text-lg font-medium mb-4">Previous Period</h2>
-              <div className="w-full h-64">
+         <div className="relative w-full h-64">
                 <ComparisonChart
                   currentData={periodComparison.current.timeseriesData}
                   previousData={periodComparison.previous.timeseriesData}
@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
           <Card className="bg-zinc-800 rounded-md mb-8">
             <CardContent className="p-6">
               <h2 className="text-lg font-medium mb-4">Previous Year</h2>
-              <div className="w-full h-64">
+      <div className="relative w-full h-64">
                 <ComparisonChart
                   currentData={yearComparison.current.timeseriesData}
                   previousData={yearComparison.previous.timeseriesData}
