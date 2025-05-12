@@ -51,8 +51,8 @@ const Dashboard: React.FC = () => {
   const impressionsDelta = data.summary?.impressions?.delta || 0;
   const downloadsValue = data.summary?.downloads?.value || 0;
   const downloadsDelta = data.summary?.downloads?.delta || 0;
-  const pageViewsValue = data.summary?.product_page_views?.value || 0;
-  const pageViewsDelta = data.summary?.product_page_views?.delta || 0;
+  const pageViewsValue = data.summary?.pageViews?.value || 0; // Changed from product_page_views to pageViews
+  const pageViewsDelta = data.summary?.pageViews?.delta || 0; // Changed from product_page_views to pageViews
   const cvrValue = data.summary?.cvr?.value || 0;
   const cvrDelta = data.summary?.cvr?.delta || 0;
 
@@ -115,6 +115,7 @@ const Dashboard: React.FC = () => {
                 <ComparisonChart
                   currentData={periodComparison.current.timeseriesData}
                   previousData={periodComparison.previous.timeseriesData}
+                  title="Previous Period" // Added title prop
                   metric="downloads"
                 />
               </div>
@@ -133,6 +134,7 @@ const Dashboard: React.FC = () => {
                 <ComparisonChart
                   currentData={yearComparison.current.timeseriesData}
                   previousData={yearComparison.previous.timeseriesData}
+                  title="Previous Year" // Added title prop
                   metric="downloads"
                 />
               </div>
