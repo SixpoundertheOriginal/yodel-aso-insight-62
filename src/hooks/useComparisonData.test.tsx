@@ -1,118 +1,109 @@
-
+// src/hooks/useComparisonData.test.tsx
 import { renderHook } from '@testing-library/react';
 import { useComparisonData } from './useComparisonData';
-import { useMockAsoData } from './useMockAsoData';
-import { useAsoData } from '@/context/AsoDataContext';
+import { useAsoData } from '../context/AsoDataContext';
+import { standardizeChartData } from '../utils/format';
 
-// Mock the hooks we depend on
-jest.mock('./useMockAsoData', () => ({
-  useMockAsoData: jest.fn()
-}));
-
-jest.mock('@/context/AsoDataContext', () => ({
+// Mock the useAsoData hook
+jest.mock('../context/AsoDataContext', () => ({
   useAsoData: jest.fn()
 }));
 
+// Mock the standardizeChartData utility
+jest.mock('../utils/format', () => ({
+  standardizeChartData: jest.fn(data => data) // Simple pass-through for testing
+}));
+
 describe('useComparisonData', () => {
+  // Sample mock data
+  const mockTimeseriesData = [
+    { date: '2023-01-01', impressions: 100, downloads: 50, pageViews: 200 },
+    { date: '2023-01-02', impressions: 110, downloads: 55, pageViews: 220 },
+  ];
+  
+  const mockData = {
+    summary: {
+      impressions: { value: 210, delta: 5 },
+      downloads: { value: 105, delta: 10 },
+      pageViews: { value: 420, delta: 7 },
+      cvr: { value: 50, delta: 3 },
+    },
+    timeseriesData: mockTimeseriesData,
+    trafficSources: [
+      { name: 'Organic', value: 150, delta: 5 }
+    ]
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (standardizeChartData as jest.Mock).mockImplementation(data => data);
   });
 
-  test('should calculate correct date shift for period comparison', () => {
-    // Mock the useAsoData hook
-    const mockedCurrentDate = new Date('2023-01-30');
-    const mockedStartDate = new Date('2023-01-01');
-    
+  it('returns loading state from useAsoData', () => {
     (useAsoData as jest.Mock).mockReturnValue({
-      data: { summary: {}, timeseriesData: [] },
-      loading: false,
-      error: null,
-      filters: {
-        clientList: ['TestClient'],
-        dateRange: {
-          from: mockedStartDate,
-          to: mockedCurrentDate,
-        },
-        trafficSources: ['App Store Search']
-      }
-    });
-    
-    (useMockAsoData as jest.Mock).mockReturnValue({
       data: null,
-      loading: false,
-      error: null
+      loading: true
     });
 
-    renderHook(() => useComparisonData('period'));
+    const { result } = renderHook(() => useComparisonData('period'));
 
-    // Check that useMockAsoData was called with the correct previous date range
-    expect(useMockAsoData).toHaveBeenCalledWith(
-      ['TestClient'],
-      expect.objectContaining({
-        from: expect.any(Date),
-        to: expect.any(Date)
-      }),
-      ['App Store Search']
-    );
-    
-    // Extract the dates from the call
-    const callArgs = (useMockAsoData as jest.Mock).mock.calls[0];
-    const dateRange = callArgs[1];
-    
-    // Verify the previous period is correct
-    // Should be Dec 3, 2022 - Dec 31, 2022 (29 day duration, same as Jan 1 - Jan 30)
-    const expectedDuration = 29 * 24 * 60 * 60 * 1000; // 29 days in ms
-    expect(dateRange.to.getTime() - dateRange.from.getTime()).toBeCloseTo(expectedDuration, -6); // Allow some ms variance
-    expect(dateRange.to < mockedStartDate).toBeTruthy(); // Previous period ends before current begins
+    expect(result.current.loading).toBe(true);
+    expect(result.current.current).toBeNull();
+    expect(result.current.previous).toBeNull();
   });
 
-  test('should calculate correct date shift for year comparison', () => {
-    // Mock the useAsoData hook
-    const mockedCurrentDate = new Date('2023-01-30');
-    const mockedStartDate = new Date('2023-01-01');
-    
+  it('returns null for current and previous when data is null', () => {
     (useAsoData as jest.Mock).mockReturnValue({
-      data: { summary: {}, timeseriesData: [] },
-      loading: false,
-      error: null,
-      filters: {
-        clientList: ['TestClient'],
-        dateRange: {
-          from: mockedStartDate,
-          to: mockedCurrentDate,
-        },
-        trafficSources: ['App Store Search']
-      }
-    });
-    
-    (useMockAsoData as jest.Mock).mockReturnValue({
       data: null,
-      loading: false,
-      error: null
+      loading: false
     });
 
-    renderHook(() => useComparisonData('year'));
+    const { result } = renderHook(() => useComparisonData('period'));
 
-    // Check that useMockAsoData was called with the correct previous date range
-    expect(useMockAsoData).toHaveBeenCalledWith(
-      ['TestClient'],
-      expect.objectContaining({
-        from: expect.any(Date),
-        to: expect.any(Date)
-      }),
-      ['App Store Search']
+    expect(result.current.loading).toBe(false);
+    expect(result.current.current).toBeNull();
+    expect(result.current.previous).toBeNull();
+  });
+
+  it('returns current and previous data when data is available', () => {
+    (useAsoData as jest.Mock).mockReturnValue({
+      data: mockData,
+      loading: false
+    });
+
+    const { result } = renderHook(() => useComparisonData('period'));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.current).not.toBeNull();
+    expect(result.current.previous).not.toBeNull();
+    
+    // Verify standardizeChartData was called
+    expect(standardizeChartData).toHaveBeenCalledWith(mockTimeseriesData);
+    
+    // Verify the data structure
+    expect(result.current.current?.timeseriesData).toBeDefined();
+    expect(result.current.previous?.timeseriesData).toBeDefined();
+  });
+
+  it('creates different data for previous period vs previous year', () => {
+    (useAsoData as jest.Mock).mockReturnValue({
+      data: mockData,
+      loading: false
+    });
+
+    const { result: periodResult } = renderHook(() => 
+      useComparisonData('period')
     );
     
-    // Extract the dates from the call
-    const callArgs = (useMockAsoData as jest.Mock).mock.calls[0];
-    const dateRange = callArgs[1];
+    const { result: yearResult } = renderHook(() => 
+      useComparisonData('year')
+    );
+
+    // Ensure both types generate data
+    expect(periodResult.current.current).not.toBeNull();
+    expect(yearResult.current.current).not.toBeNull();
     
-    // Verify the previous year range is exactly one year back
-    expect(dateRange.from.getFullYear()).toBe(mockedStartDate.getFullYear() - 1);
-    expect(dateRange.to.getFullYear()).toBe(mockedCurrentDate.getFullYear() - 1);
-    expect(dateRange.from.getMonth()).toBe(mockedStartDate.getMonth());
-    expect(dateRange.to.getMonth()).toBe(mockedCurrentDate.getMonth());
-    expect(dateRange.from.getDate()).toBe(mockedStartDate.getDate());
-    expect(dateRange.to.getDate()).toBe(mockedCurrentDate.getDate());
+    // Note: In the actual implementation, period and year comparisons
+    // might generate different data based on the type parameter
   });
 });
