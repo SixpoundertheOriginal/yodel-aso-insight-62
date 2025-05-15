@@ -1,6 +1,4 @@
-
-import React, { useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface TimeSeriesDataPoint {
@@ -22,36 +20,73 @@ interface ComparisonChartProps {
  * Utility function that merges current and previous series data
  * ensuring dates are properly aligned for comparison
  */
-export const mergeSeries = (currentData: TimeSeriesDataPoint[], previousData: TimeSeriesDataPoint[], metric: string) => {
+export const mergeSeries = (
+  currentData: TimeSeriesDataPoint[] = [], 
+  previousData: TimeSeriesDataPoint[] = [], 
+  metric: string
+) => {
+  // Safety check for inputs
+  if (!Array.isArray(currentData) || !Array.isArray(previousData)) {
+    console.error("Invalid data provided to mergeSeries:", { currentData, previousData });
+    return [];
+  }
+  
+  // Log some debug info to help diagnose issues
+  console.log(`Merging data for metric: ${metric}`);
+  console.log(`Current data (${currentData.length} points):`, currentData.slice(0, 2));
+  console.log(`Previous data (${previousData.length} points):`, previousData.slice(0, 2));
+  
   // Create a map to hold all unique dates and their values
   const mergedMap = new Map();
   
   // Process current data
   currentData.forEach(point => {
-    // Format date for consistent comparison
-    const dateStr = new Date(point.date).toISOString().split('T')[0];
+    if (!point || typeof point !== 'object' || !point.date) {
+      console.warn("Invalid data point in currentData:", point);
+      return; // Skip invalid points
+    }
+    
+    // Use the date as-is without reformatting to avoid issues
+    const dateStr = point.date;
+    
+    // Check if the metric exists in the data point
+    if (!(metric in point)) {
+      console.warn(`Metric "${metric}" not found in current data point:`, point);
+    }
+    
     mergedMap.set(dateStr, { 
       date: dateStr,
-      current: point[metric] || 0
+      current: typeof point[metric] === 'number' ? point[metric] : 0
     });
   });
   
   // Process previous data and merge with current
   previousData.forEach(point => {
-    const dateStr = new Date(point.date).toISOString().split('T')[0];
+    if (!point || typeof point !== 'object' || !point.date) {
+      console.warn("Invalid data point in previousData:", point);
+      return; // Skip invalid points
+    }
+    
+    const dateStr = point.date;
+    
+    // Check if the metric exists in the data point
+    if (!(metric in point)) {
+      console.warn(`Metric "${metric}" not found in previous data point:`, point);
+    }
+    
     const existing = mergedMap.get(dateStr);
     
     if (existing) {
       // Update existing entry with previous data
       mergedMap.set(dateStr, { 
         ...existing, 
-        previous: point[metric] || 0
+        previous: typeof point[metric] === 'number' ? point[metric] : 0
       });
     } else {
       // Create new entry for dates only in previous data
       mergedMap.set(dateStr, { 
         date: dateStr,
-        previous: point[metric] || 0,
+        previous: typeof point[metric] === 'number' ? point[metric] : 0,
         current: 0 // Default 0 for missing current data
       });
     }
@@ -64,8 +99,11 @@ export const mergeSeries = (currentData: TimeSeriesDataPoint[], previousData: Ti
   });
   
   // Convert map to array and sort by date
-  return Array.from(mergedMap.values())
+  const result = Array.from(mergedMap.values())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  console.log(`Merged result (${result.length} points):`, result.slice(0, 2));
+  return result;
 };
 
 const ComparisonChart: React.FC<ComparisonChartProps> = ({ 
@@ -74,24 +112,33 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
   title, 
   metric 
 }) => {
+  // Add some debug logging
+  useEffect(() => {
+    console.log(`ComparisonChart "${title}" rendering with:`, {
+      currentDataLength: currentData?.length,
+      previousDataLength: previousData?.length,
+      metric
+    });
+  }, [currentData, previousData, title, metric]);
+
   // Use our utility function to merge the series data
   const mergedData = useMemo(() => {
-    if (!currentData || !previousData) return [];
+    console.log(`Computing merged data for ${title}`);
     return mergeSeries(currentData, previousData, metric);
-  }, [currentData, previousData, metric]);
+  }, [currentData, previousData, metric, title]);
 
   // Find the minimum and maximum values for proper scaling
   const dataExtent = useMemo(() => {
-    if (mergedData.length === 0) return { min: 0, max: 100 };
+    if (!mergedData || mergedData.length === 0) return { min: 0, max: 100 };
     
     let min = Infinity;
     let max = -Infinity;
     
     mergedData.forEach(point => {
-      if (point.current !== undefined && point.current < min) min = point.current;
-      if (point.previous !== undefined && point.previous < min) min = point.previous;
-      if (point.current !== undefined && point.current > max) max = point.current;
-      if (point.previous !== undefined && point.previous > max) max = point.previous;
+      if (typeof point.current === 'number' && point.current < min) min = point.current;
+      if (typeof point.previous === 'number' && point.previous < min) min = point.previous;
+      if (typeof point.current === 'number' && point.current > max) max = point.current;
+      if (typeof point.previous === 'number' && point.previous > max) max = point.previous;
     });
     
     // Ensure min is at least 0 (no negative values)
@@ -104,8 +151,11 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
   }, [mergedData]);
 
   // Check if we have valid data to render
-  if (!mergedData.length) {
-    return <div className="text-zinc-400 p-4 text-center">Insufficient data for comparison</div>;
+  if (!mergedData || !mergedData.length) {
+    console.warn(`No merged data available for ${title}`);
+    return <div className="text-zinc-400 p-4 text-center h-64 flex items-center justify-center">
+      Insufficient data for comparison
+    </div>;
   }
 
   // Custom tooltip to display both current and previous values
@@ -125,58 +175,58 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
     return null;
   };
 
+  console.log(`Rendering chart for ${title} with ${mergedData.length} data points`);
+
   return (
-    <div className="w-full">
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={mergedData}
-            margin={{
-              top: 10,
-              right: 30,
-              left: 20,
-              bottom: 10,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#444444" />
-            <XAxis 
-              dataKey="date" 
-              tick={{ fill: '#999999' }} 
-              axisLine={{ stroke: '#555555' }} 
-            />
-            <YAxis 
-              tickFormatter={(value) => value.toLocaleString()}
-              tick={{ fill: '#999999' }}
-              axisLine={{ stroke: '#555555' }}
-              domain={[dataExtent.min, dataExtent.max]} 
-              allowDataOverflow={false}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="current"
-              name="Current"
-              stroke="#3b82f6" // Blue
-              strokeWidth={2}
-              dot={{ r: 0 }}
-              activeDot={{ r: 4 }}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="previous"
-              name="Previous"
-              stroke="#8b5cf6" // Purple
-              strokeDasharray="5 5"
-              strokeWidth={2}
-              dot={{ r: 0 }}
-              activeDot={{ r: 4 }}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={mergedData}
+          margin={{
+            top: 10,
+            right: 30,
+            left: 20,
+            bottom: 10,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#444444" />
+          <XAxis 
+            dataKey="date" 
+            tick={{ fill: '#999999' }} 
+            axisLine={{ stroke: '#555555' }} 
+          />
+          <YAxis 
+            tickFormatter={(value) => value.toLocaleString()}
+            tick={{ fill: '#999999' }}
+            axisLine={{ stroke: '#555555' }}
+            domain={[dataExtent.min, dataExtent.max]} 
+            allowDataOverflow={false}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey="current"
+            name="Current"
+            stroke="#3b82f6" // Blue
+            strokeWidth={2}
+            dot={{ r: 0 }}
+            activeDot={{ r: 4 }}
+            isAnimationActive={true}
+          />
+          <Line
+            type="monotone"
+            dataKey="previous"
+            name="Previous"
+            stroke="#8b5cf6" // Purple
+            strokeDasharray="5 5"
+            strokeWidth={2}
+            dot={{ r: 0 }}
+            activeDot={{ r: 4 }}
+            isAnimationActive={true}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 };
