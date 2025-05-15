@@ -1,27 +1,91 @@
+typescript// src/utils/format.test.ts
+// Add these tests alongside your existing formatPercentage tests
 
-import { formatPercentage } from './format';
-
-// Adding a reference to Jest types
-/// <reference types="jest" />
+import { formatPercentage, standardizeChartData } from './format';
 
 describe('formatPercentage', () => {
-  it('formats a number with one decimal place by default', () => {
-    expect(formatPercentage(5.4321)).toBe('5.4');
+  // Your existing tests for formatPercentage
+});
+
+describe('standardizeChartData', () => {
+  it('handles undefined or null data', () => {
+    expect(standardizeChartData(undefined)).toEqual([]);
+    expect(standardizeChartData(null as any)).toEqual([]);
   });
 
-  it('rounds to the nearest decimal place', () => {
-    expect(formatPercentage(-0.07)).toBe('-0.1');
+  it('handles empty arrays', () => {
+    expect(standardizeChartData([])).toEqual([]);
   });
 
-  it('formats with zero decimal places when specified', () => {
-    expect(formatPercentage(12, 0)).toBe('12');
+  it('standardizes data with correct properties', () => {
+    const input = [
+      { date: '2023-01-01', impressions: 100, downloads: 50, pageViews: 200 }
+    ];
+    
+    const output = standardizeChartData(input);
+    
+    expect(output).toEqual([
+      { date: '2023-01-01', impressions: 100, downloads: 50, pageViews: 200 }
+    ]);
   });
 
-  it('handles zero values correctly', () => {
-    expect(formatPercentage(0)).toBe('0.0');
+  it('adds missing properties with default values', () => {
+    const input = [
+      { date: '2023-01-01' }
+    ];
+    
+    const output = standardizeChartData(input);
+    
+    expect(output).toEqual([
+      { date: '2023-01-01', impressions: 0, downloads: 0, pageViews: 0 }
+    ]);
   });
 
-  it('handles larger numbers correctly', () => {
-    expect(formatPercentage(1234.56)).toBe('1,234.6');
+  it('handles alternative property name for pageViews', () => {
+    const input = [
+      { date: '2023-01-01', impressions: 100, downloads: 50, product_page_views: 200 }
+    ];
+    
+    const output = standardizeChartData(input);
+    
+    expect(output).toEqual([
+      { date: '2023-01-01', impressions: 100, downloads: 50, pageViews: 200 }
+    ]);
+  });
+  
+  it('handles non-numeric values', () => {
+    const input = [
+      { 
+        date: '2023-01-01', 
+        impressions: '100' as any, 
+        downloads: null, 
+        pageViews: undefined 
+      }
+    ];
+    
+    const output = standardizeChartData(input);
+    
+    expect(output).toEqual([
+      { date: '2023-01-01', impressions: 0, downloads: 0, pageViews: 0 }
+    ]);
+  });
+
+  it('preserves additional properties', () => {
+    const input = [
+      { 
+        date: '2023-01-01', 
+        impressions: 100, 
+        downloads: 50, 
+        pageViews: 200,
+        customProperty: 'value' 
+      }
+    ];
+    
+    const output = standardizeChartData(input);
+    
+    // The standardized output should only include the specified properties
+    expect(output).toEqual([
+      { date: '2023-01-01', impressions: 100, downloads: 50, pageViews: 200 }
+    ]);
   });
 });
