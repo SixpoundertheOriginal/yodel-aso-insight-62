@@ -36,6 +36,8 @@ const Dashboard: React.FC = () => {
   // Add console logs inside the component where they should be
   console.log("Period comparison current data:", periodComparison.current?.timeseriesData);
   console.log("Period comparison previous data:", periodComparison.previous?.timeseriesData);
+  console.log("Sample data point:", periodComparison.current?.timeseriesData?.[0]);
+
 
   if (loading || !data) {
     return (
