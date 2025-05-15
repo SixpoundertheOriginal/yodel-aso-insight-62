@@ -146,3 +146,6 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+console.log("Period comparison current data:", periodComparison.current?.timeseriesData);
+console.log("Period comparison previous data:", periodComparison.previous?.timeseriesData);
+
