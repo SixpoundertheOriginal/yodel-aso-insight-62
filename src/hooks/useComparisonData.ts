@@ -1,9 +1,10 @@
-
+// src/hooks/useComparisonData.ts
 import { useMemo } from 'react';
-import { useMockAsoData, AsoData, DateRange } from './useMockAsoData';
-import { useAsoData } from '@/context/AsoDataContext';
+import { useAsoData } from '../context/AsoDataContext';
+import { standardizeChartData } from '../utils/format';
+import { AsoData } from './useMockAsoData'; // Import the AsoData type
 
-type ComparisonPeriod = 'period' | 'year';
+export type ComparisonType = 'period' | 'year';
 
 export interface ComparisonData {
   current: AsoData | null;
@@ -13,54 +14,56 @@ export interface ComparisonData {
 }
 
 /**
- * Hook that fetches both current and previous period data
- * @param comparisonType - 'period' shifts back by the same duration, 'year' shifts by 1 year
+ * Hook that provides comparison data for current and previous periods
+ * @param type - 'period' for previous time period, 'year' for same period last year
  */
-export const useComparisonData = (comparisonType: ComparisonPeriod): ComparisonData => {
-  const { data: currentData, loading: currentLoading, error: currentError, filters } = useAsoData();
+export const useComparisonData = (type: ComparisonType): ComparisonData => {
+  const { data, loading, error } = useAsoData();
   
-  // Calculate the previous period date range
-  const previousDateRange = useMemo(() => {
-    if (!filters.dateRange.from || !filters.dateRange.to) {
-      return filters.dateRange;
+  const comparisonData = useMemo(() => {
+    if (!data) {
+      return {
+        current: null,
+        previous: null,
+      };
     }
     
-    const currentFrom = new Date(filters.dateRange.from);
-    const currentTo = new Date(filters.dateRange.to);
-    const durationMs = currentTo.getTime() - currentFrom.getTime();
+    // Standardize current data
+    const currentData = {
+      ...data,
+      timeseriesData: standardizeChartData(data.timeseriesData),
+    };
     
-    let previousFrom: Date, previousTo: Date;
-    
-    if (comparisonType === 'period') {
-      // Shift back by the same duration
-      previousTo = new Date(currentFrom);
-      previousTo.setTime(previousTo.getTime() - 1); // Subtract 1ms to avoid overlap
-      previousFrom = new Date(previousTo.getTime() - durationMs);
-    } else {
-      // Shift back by 1 year
-      previousFrom = new Date(currentFrom);
-      previousTo = new Date(currentTo);
-      previousFrom.setFullYear(previousFrom.getFullYear() - 1);
-      previousTo.setFullYear(previousTo.getFullYear() - 1);
-    }
+    // Create simulated previous data with different values based on comparison type
+    // In a real app, this would fetch actual historical data
+    const previousData = {
+      ...data,
+      timeseriesData: standardizeChartData(data.timeseriesData).map(item => {
+        // Different variation factor based on comparison type
+        const factor = type === 'period' ? 
+          (0.7 + Math.random() * 0.6) : // 70-130% for period comparison
+          (0.5 + Math.random() * 0.5);  // 50-100% for year comparison
+        
+        return {
+          ...item,
+          downloads: Math.floor(item.downloads * factor),
+          impressions: Math.floor(item.impressions * factor),
+          pageViews: Math.floor(item.pageViews * factor),
+        };
+      }),
+    };
     
     return {
-      from: previousFrom,
-      to: previousTo,
+      current: currentData,
+      previous: previousData,
     };
-  }, [filters.dateRange, comparisonType]);
-  
-  // Fetch data for the previous period
-  const { data: previousData, loading: previousLoading, error: previousError } = useMockAsoData(
-    filters.clientList,
-    previousDateRange,
-    filters.trafficSources
-  );
+  }, [data, type]);
   
   return {
-    current: currentData,
-    previous: previousData,
-    loading: currentLoading || previousLoading,
-    error: currentError || previousError,
+    ...comparisonData,
+    loading,
+    error,
   };
 };
+
+export default useComparisonData;
