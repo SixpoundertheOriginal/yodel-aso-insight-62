@@ -65,9 +65,9 @@ const OverviewPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="flex flex-col space-y-6">
+      <div className="flex flex-col space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Performance Overview</h1>
+          <h1 className="text-3xl font-bold">Performance Overview</h1>
           
           <div className="flex gap-4">
             {/* Date Range Filter */}
@@ -92,7 +92,7 @@ const OverviewPage: React.FC = () => {
         
         {/* Loading State */}
         {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-8">
             {[1, 2, 3].map((_, index) => (
               <Card key={index} className="bg-zinc-800 border-zinc-700">
                 <CardHeader>
@@ -101,7 +101,7 @@ const OverviewPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-64 w-full" />
+                  <Skeleton className="h-80 w-full" />
                 </CardContent>
               </Card>
             ))}
@@ -110,14 +110,14 @@ const OverviewPage: React.FC = () => {
         
         {/* Charts */}
         {!loading && current && previous && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-8">
             {/* Impressions Chart */}
             <Card className="bg-zinc-800 border-zinc-700">
               <CardHeader>
-                <CardTitle className="text-lg font-medium">Impressions</CardTitle>
+                <CardTitle className="text-xl font-medium">Impressions</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer>
+                <ChartContainer height={400}>
                   <ComparisonChart
                     currentData={current.timeseriesData}
                     previousData={previous.timeseriesData}
@@ -131,10 +131,10 @@ const OverviewPage: React.FC = () => {
             {/* Downloads Chart */}
             <Card className="bg-zinc-800 border-zinc-700">
               <CardHeader>
-                <CardTitle className="text-lg font-medium">Downloads</CardTitle>
+                <CardTitle className="text-xl font-medium">Downloads</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer>
+                <ChartContainer height={400}>
                   <ComparisonChart
                     currentData={current.timeseriesData}
                     previousData={previous.timeseriesData}
@@ -148,25 +148,55 @@ const OverviewPage: React.FC = () => {
             {/* Conversion Rate Chart - calculated as (downloads/impressions)*100 */}
             <Card className="bg-zinc-800 border-zinc-700">
               <CardHeader>
-                <CardTitle className="text-lg font-medium">Conversion Rate</CardTitle>
+                <CardTitle className="text-xl font-medium">Conversion Rate</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ChartContainer>
-                  {data && data.summary && (
-                    <div className="flex flex-col h-full justify-center items-center">
-                      <div className="text-4xl font-bold">
-                        {((data.summary.downloads.value / data.summary.impressions.value) * 100).toFixed(1)}%
+              <CardContent className="flex flex-col">
+                {data && data.summary && (
+                  <>
+                    <ChartContainer height={200}>
+                      <div className="flex flex-col h-full justify-center items-center">
+                        <div className="text-6xl font-bold">
+                          {((data.summary.downloads.value / data.summary.impressions.value) * 100).toFixed(1)}%
+                        </div>
+                        <div className="flex items-center mt-4">
+                          <span className={`text-xl ${data.summary.cvr.delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {data.summary.cvr.delta >= 0 ? '↑' : '↓'}
+                            {Math.abs(data.summary.cvr.delta).toFixed(1)}%
+                          </span>
+                          <span className="text-lg text-zinc-400 ml-2">vs previous period</span>
+                        </div>
                       </div>
-                      <div className="flex items-center mt-2">
-                        <span className={`text-sm ${data.summary.cvr.delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {data.summary.cvr.delta >= 0 ? '↑' : '↓'}
-                          {Math.abs(data.summary.cvr.delta).toFixed(1)}%
-                        </span>
-                        <span className="text-sm text-zinc-400 ml-1">vs previous period</span>
-                      </div>
+                    </ChartContainer>
+                    
+                    <div className="mt-6">
+                      <ChartContainer height={200}>
+                        <div className="grid grid-cols-2 gap-8 h-full">
+                          <div className="bg-zinc-700/30 rounded-lg p-6 flex flex-col justify-center">
+                            <div className="text-zinc-400 mb-2">Total Impressions</div>
+                            <div className="text-3xl font-bold">
+                              {data.summary.impressions.value.toLocaleString()}
+                            </div>
+                            <div className={`text-sm mt-2 ${data.summary.impressions.delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {data.summary.impressions.delta >= 0 ? '↑' : '↓'} 
+                              {Math.abs(data.summary.impressions.delta).toFixed(1)}% vs previous
+                            </div>
+                          </div>
+                          
+                          <div className="bg-zinc-700/30 rounded-lg p-6 flex flex-col justify-center">
+                            <div className="text-zinc-400 mb-2">Total Downloads</div>
+                            <div className="text-3xl font-bold">
+                              {data.summary.downloads.value.toLocaleString()}
+                            </div>
+                            <div className={`text-sm mt-2 ${data.summary.downloads.delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {data.summary.downloads.delta >= 0 ? '↑' : '↓'} 
+                              {Math.abs(data.summary.downloads.delta).toFixed(1)}% vs previous
+                            </div>
+                          </div>
+                        </div>
+                      </ChartContainer>
                     </div>
-                  )}
-                </ChartContainer>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
