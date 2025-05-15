@@ -32,6 +32,10 @@ const Dashboard: React.FC = () => {
 
   const periodComparison = useComparisonData("period");
   const yearComparison = useComparisonData("year");
+  
+  // Add console logs inside the component where they should be
+  console.log("Period comparison current data:", periodComparison.current?.timeseriesData);
+  console.log("Period comparison previous data:", periodComparison.previous?.timeseriesData);
 
   if (loading || !data) {
     return (
@@ -146,6 +150,3 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
-console.log("Period comparison current data:", periodComparison.current?.timeseriesData);
-console.log("Period comparison previous data:", periodComparison.previous?.timeseriesData);
-
