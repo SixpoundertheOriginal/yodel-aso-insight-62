@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { TimeSeriesPoint } from "@/hooks/useMockAsoData";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { chartColors, chartConfig } from "@/utils/chartConfig";
 
 interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];
@@ -28,10 +29,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }));
 
-  const chartConfig = {
-    impressions: { color: "#3b82f6" }, // blue
-    downloads: { color: "#10b981" },   // green
-    pageViews: { color: "#8b5cf6" }    // purple
+  // Use shared chart config
+  const chartConfigObj = {
+    impressions: { color: chartColors.impressions },
+    downloads: { color: chartColors.downloads },
+    pageViews: { color: chartColors.pageViews }
   };
   
   return (
@@ -39,32 +41,42 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2" style={{ backgroundColor: chartColors.impressions }}></div>
             <span className="text-sm text-zinc-400">Impressions</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full mr-2" style={{ backgroundColor: chartColors.downloads }}></div>
             <span className="text-sm text-zinc-400">Downloads</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+            <div className="w-3 h-3 bg-purple-500 rounded-full mr-2" style={{ backgroundColor: chartColors.pageViews }}></div>
             <span className="text-sm text-zinc-400">Page Views</span>
           </div>
         </div>
       </div>
       
       <div className="h-80 w-full">
-        <ChartContainer config={chartConfig}>
+        <ChartContainer config={chartConfigObj}>
           <LineChart data={formattedData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+            <CartesianGrid 
+              strokeDasharray={chartConfig.grid.strokeDasharray} 
+              stroke={chartConfig.grid.stroke}
+            />
             <XAxis 
               dataKey="date"
-              tick={{ fill: '#9ca3af' }}
-              tickLine={{ stroke: '#9ca3af' }}
+              tick={{ fill: chartConfig.axis.tick.fill }}
+              tickLine={{ stroke: chartConfig.axis.tick.fill }}
+              tickFormatter={(value) => {
+                // On mobile screens, show shorter date format
+                if (window.innerWidth < 768) {
+                  return value.split(' ')[1]; // Just show the day
+                }
+                return value;
+              }}
             />
             <YAxis 
-              tick={{ fill: '#9ca3af' }} 
-              tickLine={{ stroke: '#9ca3af' }}
+              tick={{ fill: chartConfig.axis.tick.fill }} 
+              tickLine={{ stroke: chartConfig.axis.tick.fill }}
               width={60}
             />
             <ChartTooltip 
@@ -74,7 +86,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
             <Line 
               type="monotone" 
               dataKey="impressions" 
-              stroke="#3b82f6"
+              stroke={chartColors.impressions}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 6 }}
@@ -82,7 +94,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
             <Line 
               type="monotone" 
               dataKey="downloads" 
-              stroke="#10b981"
+              stroke={chartColors.downloads}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 6 }}
@@ -90,7 +102,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
             <Line 
               type="monotone" 
               dataKey="pageViews" 
-              stroke="#8b5cf6"
+              stroke={chartColors.pageViews}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 6 }}

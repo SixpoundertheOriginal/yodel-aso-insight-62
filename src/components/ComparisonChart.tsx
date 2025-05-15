@@ -1,5 +1,7 @@
+
 import React, { useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { chartColors, chartConfig } from "@/utils/chartConfig";
 
 interface TimeSeriesDataPoint {
   date: string;
@@ -150,6 +152,18 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
     return { min, max };
   }, [mergedData]);
 
+  // Format date for tooltip and axis labels
+  const formatDate = (dateStr: string, isShort: boolean = false) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', 
+        isShort ? { day: 'numeric' } : { month: 'short', day: 'numeric' }
+      );
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   // Check if we have valid data to render
   if (!mergedData || !mergedData.length) {
     console.warn(`No merged data available for ${title}`);
@@ -158,17 +172,38 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
     </div>;
   }
 
-  // Custom tooltip to display both current and previous values
+  // Enhanced tooltip with percentage difference
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Calculate percentage difference if both values exist
+      const calculateDiff = () => {
+        const current = payload.find((item: any) => item.dataKey === 'current')?.value;
+        const previous = payload.find((item: any) => item.dataKey === 'previous')?.value;
+        
+        if (typeof current === 'number' && typeof previous === 'number' && previous !== 0) {
+          const diff = ((current - previous) / previous) * 100;
+          return diff.toFixed(1);
+        }
+        return null;
+      };
+      
+      const diff = calculateDiff();
+      const diffClass = diff && parseFloat(diff) >= 0 ? 'text-green-500' : 'text-red-500';
+      
       return (
-        <div className="bg-zinc-800 p-3 border border-zinc-700 rounded-md shadow-lg">
-          <p className="text-zinc-400 text-xs mb-1">{label}</p>
+        <div className={`${chartConfig.tooltip.background} p-3 border ${chartConfig.tooltip.border} rounded-md shadow-lg`}>
+          <p className={`${chartConfig.tooltip.text} text-xs mb-1`}>{formatDate(label)}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm font-medium">
-              {entry.name}: {entry.value.toLocaleString()}
+            <p key={index} style={{ color: entry.color }} className="text-sm font-medium flex justify-between gap-4">
+              <span>{entry.name}:</span>
+              <span>{entry.value.toLocaleString()}</span>
             </p>
           ))}
+          {diff && (
+            <p className="text-xs mt-1 pt-1 border-t border-zinc-700">
+              Difference: <span className={diffClass}>{diff}%</span>
+            </p>
+          )}
         </div>
       );
     }
@@ -189,16 +224,20 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
             bottom: 10,
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#444444" />
+          <CartesianGrid 
+            strokeDasharray={chartConfig.grid.strokeDasharray} 
+            stroke={chartConfig.grid.stroke} 
+          />
           <XAxis 
             dataKey="date" 
-            tick={{ fill: '#999999' }} 
-            axisLine={{ stroke: '#555555' }} 
+            tick={{ fill: chartConfig.axis.tick.fill }} 
+            axisLine={{ stroke: chartConfig.axis.line.stroke }} 
+            tickFormatter={(value) => formatDate(value, window.innerWidth < 768)}
           />
           <YAxis 
             tickFormatter={(value) => value.toLocaleString()}
-            tick={{ fill: '#999999' }}
-            axisLine={{ stroke: '#555555' }}
+            tick={{ fill: chartConfig.axis.tick.fill }}
+            axisLine={{ stroke: chartConfig.axis.line.stroke }}
             domain={[dataExtent.min, dataExtent.max]} 
             allowDataOverflow={false}
           />
@@ -208,7 +247,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
             type="monotone"
             dataKey="current"
             name="Current"
-            stroke="#3b82f6" // Blue
+            stroke={chartColors.current}
             strokeWidth={2}
             dot={{ r: 0 }}
             activeDot={{ r: 4 }}
@@ -218,7 +257,7 @@ const ComparisonChart: React.FC<ComparisonChartProps> = ({
             type="monotone"
             dataKey="previous"
             name="Previous"
-            stroke="#8b5cf6" // Purple
+            stroke={chartColors.previous}
             strokeDasharray="5 5"
             strokeWidth={2}
             dot={{ r: 0 }}

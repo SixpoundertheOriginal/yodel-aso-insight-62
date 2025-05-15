@@ -9,6 +9,8 @@ import { useAsoData } from "../context/AsoDataContext";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { Toggle } from "@/components/ui/toggle";
 import { Card, CardContent } from "@/components/ui/card";
+import ChartContainer from "@/components/ui/ChartContainer";
+import { chartConfig } from "@/utils/chartConfig";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
@@ -33,11 +35,10 @@ const Dashboard: React.FC = () => {
   const periodComparison = useComparisonData("period");
   const yearComparison = useComparisonData("year");
   
-  // Add console logs inside the component where they should be
+  // Console logs for debugging
   console.log("Period comparison current data:", periodComparison.current?.timeseriesData);
   console.log("Period comparison previous data:", periodComparison.previous?.timeseriesData);
   console.log("Sample data point:", periodComparison.current?.timeseriesData?.[0]);
-
 
   if (loading || !data) {
     return (
@@ -57,8 +58,8 @@ const Dashboard: React.FC = () => {
   const impressionsDelta = data.summary?.impressions?.delta || 0;
   const downloadsValue = data.summary?.downloads?.value || 0;
   const downloadsDelta = data.summary?.downloads?.delta || 0;
-  const pageViewsValue = data.summary?.pageViews?.value || 0; // Changed from product_page_views to pageViews
-  const pageViewsDelta = data.summary?.pageViews?.delta || 0; // Changed from product_page_views to pageViews
+  const pageViewsValue = data.summary?.pageViews?.value || 0;
+  const pageViewsDelta = data.summary?.pageViews?.delta || 0;
   const cvrValue = data.summary?.cvr?.value || 0;
   const cvrDelta = data.summary?.cvr?.delta || 0;
 
@@ -104,9 +105,9 @@ const Dashboard: React.FC = () => {
       <Card className="bg-zinc-800 rounded-md mb-8">
         <CardContent className="p-6">
           <h2 className="text-lg font-medium mb-4">Performance Metrics</h2>
-          <div className="relative w-full h-64">
+          <ChartContainer height={chartConfig.height}>
             {data.timeseriesData && <TimeSeriesChart data={data.timeseriesData} />}
-          </div>
+          </ChartContainer>
         </CardContent>
       </Card>
 
@@ -117,14 +118,14 @@ const Dashboard: React.FC = () => {
           <Card className="bg-zinc-800 rounded-md mb-8">
             <CardContent className="p-6">
               <h2 className="text-lg font-medium mb-4">Previous Period</h2>
-         <div className="relative w-full h-64">
+              <ChartContainer height={chartConfig.height}>
                 <ComparisonChart
                   currentData={periodComparison.current.timeseriesData}
                   previousData={periodComparison.previous.timeseriesData}
-                  title="Previous Period" // Added title prop
+                  title="Previous Period"
                   metric="downloads"
                 />
-              </div>
+              </ChartContainer>
             </CardContent>
           </Card>
         )}
@@ -136,14 +137,14 @@ const Dashboard: React.FC = () => {
           <Card className="bg-zinc-800 rounded-md mb-8">
             <CardContent className="p-6">
               <h2 className="text-lg font-medium mb-4">Previous Year</h2>
-      <div className="relative w-full h-64">
+              <ChartContainer height={chartConfig.height}>
                 <ComparisonChart
                   currentData={yearComparison.current.timeseriesData}
                   previousData={yearComparison.previous.timeseriesData}
-                  title="Previous Year" // Added title prop
+                  title="Previous Year"
                   metric="downloads"
                 />
-              </div>
+              </ChartContainer>
             </CardContent>
           </Card>
         )}
