@@ -1,4 +1,5 @@
-typescript// src/utils/format.test.ts
+
+// src/utils/format.test.ts
 // Add these tests alongside your existing formatPercentage tests
 
 import { formatPercentage, standardizeChartData } from './format';
