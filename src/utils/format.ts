@@ -5,3 +5,23 @@ export function formatPercentage(value: number, decimals = 1): string {
     maximumFractionDigits: decimals,
   }).format(value);
 }
+// src/utils/format.ts
+// Add this function alongside your existing formatting utilities
+
+/**
+ * Standardizes timeseries data for chart components, ensuring
+ * consistent structure and handling missing values.
+ */
+export const standardizeChartData = (data: any[] | undefined): any[] => {
+  if (!data || !Array.isArray(data)) return [];
+  
+  return data.map(point => ({
+    date: point.date || "",
+    impressions: typeof point.impressions === 'number' ? point.impressions : 0,
+    downloads: typeof point.downloads === 'number' ? point.downloads : 0, 
+    // Support both naming conventions to handle the transition to BigQuery later
+    pageViews: typeof point.pageViews === 'number' ? 
+      point.pageViews : 
+      (typeof point.product_page_views === 'number' ? point.product_page_views : 0),
+  }));
+};
