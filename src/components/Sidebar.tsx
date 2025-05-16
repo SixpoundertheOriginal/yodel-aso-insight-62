@@ -7,9 +7,17 @@ const Sidebar: React.FC = React.memo(() => {
   const location = useLocation();
   
   return (
-    <aside className="w-64 bg-zinc-800 border-r border-zinc-700 min-h-0 h-full">
-      <div className="p-4">
-        <h2 className="text-xl font-semibold text-white mb-6">Dashboard</h2>
+    <aside className="w-64 bg-zinc-900 border-r border-zinc-700 min-h-0 h-full">
+      <div className="py-6 px-4">
+        <div className="flex items-center mb-8 px-2">
+          <div className="w-10 h-10 rounded-md bg-gradient-to-r from-yodel-orange to-yodel-orange/90 flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-xl">Y</span>
+          </div>
+          <div className="ml-3">
+            <h2 className="text-xl font-semibold text-white">Yodel</h2>
+            <p className="text-xs text-zinc-400">App Store Optimization</p>
+          </div>
+        </div>
         <nav className="space-y-1">
           <SidebarItem 
             href="/overview" 
@@ -54,11 +62,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ href, icon, label, isActive }
       to={href}
       className={`flex items-center px-3 py-2 rounded-md transition-colors ${
         isActive 
-          ? "bg-zinc-700 text-white" 
-          : "text-zinc-400 hover:bg-zinc-700 hover:text-white"
+          ? "bg-yodel-orange text-white" 
+          : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
       }`}
     >
-      <span className="mr-3">{icon}</span>
+      <span className={`mr-3 ${isActive ? "text-white" : "text-zinc-400"}`}>{icon}</span>
       <span>{label}</span>
     </Link>
   );
