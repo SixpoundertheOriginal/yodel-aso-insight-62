@@ -9,7 +9,7 @@ interface ChartContainerProps {
 
 export const ChartContainer: React.FC<ChartContainerProps> = ({
   children,
-  height = 280,
+  height = 400,
   className = ""
 }) => {
   return (

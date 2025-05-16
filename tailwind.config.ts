@@ -56,6 +56,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Yodel Mobile brand colors
+        yodel: {
+          orange: "#F97316", // Main orange from the Yodel logo
+          black: "#121212",  // Deep black for backgrounds
+          blue: {
+            light: "#8ECDFF", // Light blue for gradients
+            DEFAULT: "#3B82F6", // Standard blue accent
+            dark: "#1E40AF", // Dark blue for gradients
+          },
+          gray: {
+            dark: "#333333",
+            DEFAULT: "#6B7280",
+            light: "#D1D5DB",
+          }
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -75,6 +90,9 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      backgroundImage: {
+        'yodel-gradient': 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
       },
     },
   },

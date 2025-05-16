@@ -1,11 +1,11 @@
 
 // src/utils/chartConfig.ts
 export const chartColors = {
-  impressions: "#3b82f6", // blue
-  downloads: "#10b981",   // green
-  pageViews: "#8b5cf6",   // purple
-  current: "#3b82f6",     // blue
-  previous: "#8b5cf6",    // purple
+  impressions: "#3B82F6", // Yodel blue
+  downloads: "#F97316",   // Yodel orange
+  pageViews: "#8B5CF6",   // Complementary purple
+  current: "#F97316",     // Yodel orange for current data
+  previous: "#94A3B8",    // Grey for previous data
 };
 
 export const chartConfig = {
@@ -22,5 +22,5 @@ export const chartConfig = {
     border: "border-zinc-700",
     text: "text-zinc-400"
   },
-  height: 280 // standard chart height
+  height: 400 // increased chart height for better visualization
 };
