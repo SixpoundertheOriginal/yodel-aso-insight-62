@@ -33,7 +33,7 @@
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 
   .light {
@@ -73,28 +73,44 @@
   }
 
   body {
-    @apply bg-zinc-900 text-zinc-100 antialiased;
+    @apply bg-zinc-950 text-zinc-100 antialiased;
   }
 
   .glass-card {
-    @apply bg-zinc-800/50 backdrop-blur-sm border border-zinc-700/50 shadow-xl;
+    @apply bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/50 shadow-xl;
   }
   
   /* Yodel Mobile specific styles */
   .yodel-gradient-bg {
-    @apply bg-gradient-to-r from-blue-600 to-purple-600;
+    @apply bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900;
+  }
+  
+  .yodel-gradient-orange {
+    @apply bg-gradient-to-r from-orange-500 to-orange-600;
+  }
+  
+  .yodel-gradient-blue {
+    @apply bg-gradient-to-r from-blue-500 to-blue-600;
   }
   
   .yodel-card {
-    @apply bg-zinc-800 border-zinc-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300;
+    @apply bg-zinc-900 border border-zinc-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300;
   }
   
   .yodel-button {
-    @apply bg-yodel-orange hover:bg-yodel-orange/90 text-white font-medium rounded-lg px-4 py-2 transition-colors;
+    @apply bg-yodel-orange hover:bg-yodel-orange/90 text-white font-medium rounded-md px-4 py-2 transition-colors;
   }
   
   .chart-container {
-    @apply p-6 rounded-lg bg-zinc-800 border-zinc-700 shadow-lg;
+    @apply p-6 rounded-lg bg-zinc-900 border border-zinc-800 shadow-lg;
+  }
+  
+  .chart-title {
+    @apply text-2xl font-bold text-white mb-4;
+  }
+  
+  .stat-card {
+    @apply bg-zinc-900/70 backdrop-blur-sm border border-zinc-800/70 rounded-xl p-6 transition-all hover:bg-zinc-900/90;
   }
 }
 

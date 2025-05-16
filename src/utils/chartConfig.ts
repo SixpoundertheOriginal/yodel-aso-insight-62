@@ -1,8 +1,8 @@
 
 // src/utils/chartConfig.ts
 export const chartColors = {
-  impressions: "#3B82F6", // Yodel blue
-  downloads: "#F97316",   // Yodel orange
+  impressions: "#F97316", // Yodel orange for impressions 
+  downloads: "#3B82F6",   // Yodel blue for downloads
   pageViews: "#8B5CF6",   // Complementary purple
   current: "#F97316",     // Yodel orange for current data
   previous: "#94A3B8",    // Grey for previous data
@@ -11,16 +11,16 @@ export const chartColors = {
 export const chartConfig = {
   grid: {
     strokeDasharray: "3 3",
-    stroke: "#444444"
+    stroke: "#333333"     // Darker grid lines for better contrast
   },
   axis: {
     tick: { fill: '#999999' },
     line: { stroke: '#555555' }
   },
   tooltip: {
-    background: "bg-zinc-800",
-    border: "border-zinc-700",
-    text: "text-zinc-400"
+    background: "bg-zinc-900",
+    border: "border-zinc-800", 
+    text: "text-zinc-300"
   },
-  height: 400 // increased chart height for better visualization
+  height: 450 // increased chart height for better visualization
 };

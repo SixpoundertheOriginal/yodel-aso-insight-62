@@ -72,10 +72,10 @@ const OverviewPage: React.FC = () => {
           <div className="flex gap-4">
             {/* Date Range Filter */}
             <Select defaultValue="30d" onValueChange={handleDateRangeChange}>
-              <SelectTrigger className="w-[180px] bg-zinc-800 border-zinc-700 text-zinc-100">
+              <SelectTrigger className="w-[180px] bg-zinc-900 border-zinc-800 text-zinc-100">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-800 border-zinc-700 text-zinc-100">
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                 <SelectItem value="7d">Last 7 days</SelectItem>
                 <SelectItem value="30d">Last 30 days</SelectItem>
                 <SelectItem value="90d">Last 90 days</SelectItem>
@@ -94,7 +94,7 @@ const OverviewPage: React.FC = () => {
         {loading && (
           <div className="grid grid-cols-1 gap-10">
             {[1, 2, 3].map((_, index) => (
-              <Card key={index} className="bg-zinc-800 border-zinc-700 shadow-lg">
+              <Card key={index} className="bg-zinc-900 border-zinc-800 shadow-lg">
                 <CardHeader>
                   <CardTitle>
                     <Skeleton className="h-8 w-48" />
@@ -112,8 +112,8 @@ const OverviewPage: React.FC = () => {
         {!loading && current && previous && (
           <div className="grid grid-cols-1 gap-10">
             {/* Impressions Chart */}
-            <Card className="bg-zinc-800 border-zinc-700 shadow-lg overflow-hidden">
-              <CardHeader className="bg-zinc-800/80 backdrop-filter backdrop-blur-sm border-b border-zinc-700/50">
+            <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
+              <CardHeader className="bg-zinc-900/80 backdrop-filter backdrop-blur-sm border-b border-zinc-800/50">
                 <CardTitle className="text-2xl font-bold text-white">Impressions</CardTitle>
               </CardHeader>
               <CardContent className="p-8">
@@ -129,8 +129,8 @@ const OverviewPage: React.FC = () => {
             </Card>
             
             {/* Downloads Chart */}
-            <Card className="bg-zinc-800 border-zinc-700 shadow-lg overflow-hidden">
-              <CardHeader className="bg-zinc-800/80 backdrop-filter backdrop-blur-sm border-b border-zinc-700/50">
+            <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
+              <CardHeader className="bg-zinc-900/80 backdrop-filter backdrop-blur-sm border-b border-zinc-800/50">
                 <CardTitle className="text-2xl font-bold text-white">Downloads</CardTitle>
               </CardHeader>
               <CardContent className="p-8">
@@ -146,8 +146,8 @@ const OverviewPage: React.FC = () => {
             </Card>
             
             {/* Conversion Rate Chart - calculated as (downloads/impressions)*100 */}
-            <Card className="bg-zinc-800 border-zinc-700 shadow-lg overflow-hidden">
-              <CardHeader className="bg-zinc-800/80 backdrop-filter backdrop-blur-sm border-b border-zinc-700/50">
+            <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
+              <CardHeader className="bg-zinc-900/80 backdrop-filter backdrop-blur-sm border-b border-zinc-800/50">
                 <CardTitle className="text-2xl font-bold text-white">Conversion Rate</CardTitle>
               </CardHeader>
               <CardContent className="p-8">
@@ -156,10 +156,10 @@ const OverviewPage: React.FC = () => {
                     <div className="mb-10">
                       <ChartContainer height={250}>
                         <div className="flex flex-col h-full justify-center items-center">
-                          <div className="text-7xl font-bold text-yodel-orange">
+                          <div className="text-8xl font-bold text-yodel-orange">
                             {((data.summary.downloads.value / data.summary.impressions.value) * 100).toFixed(1)}%
                           </div>
-                          <div className="flex items-center mt-6">
+                          <div className="flex items-center mt-8">
                             <span className={`text-2xl ${data.summary.cvr.delta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                               {data.summary.cvr.delta >= 0 ? '↑' : '↓'}
                               {Math.abs(data.summary.cvr.delta).toFixed(1)}%
@@ -173,7 +173,7 @@ const OverviewPage: React.FC = () => {
                     <div className="mt-8">
                       <ChartContainer height={220}>
                         <div className="grid grid-cols-2 gap-8 h-full">
-                          <div className="bg-zinc-800 bg-opacity-50 border border-zinc-700/50 rounded-xl p-8 flex flex-col justify-center hover:bg-zinc-700/20 transition-colors duration-300">
+                          <div className="stat-card flex flex-col justify-center">
                             <div className="text-zinc-400 mb-3 text-lg">Total Impressions</div>
                             <div className="text-4xl font-bold text-white">
                               {data.summary.impressions.value.toLocaleString()}
@@ -184,7 +184,7 @@ const OverviewPage: React.FC = () => {
                             </div>
                           </div>
                           
-                          <div className="bg-zinc-800 bg-opacity-50 border border-zinc-700/50 rounded-xl p-8 flex flex-col justify-center hover:bg-zinc-700/20 transition-colors duration-300">
+                          <div className="stat-card flex flex-col justify-center">
                             <div className="text-zinc-400 mb-3 text-lg">Total Downloads</div>
                             <div className="text-4xl font-bold text-white">
                               {data.summary.downloads.value.toLocaleString()}

@@ -9,12 +9,12 @@ interface ChartContainerProps {
 
 export const ChartContainer: React.FC<ChartContainerProps> = ({
   children,
-  height = 400,
+  height = 450,
   className = ""
 }) => {
   return (
     <div 
-      className={`relative w-full ${className}`}
+      className={`relative w-full overflow-hidden ${className}`}
       style={{ height: `${height}px`, minHeight: `${height}px` }}
     >
       {children}
