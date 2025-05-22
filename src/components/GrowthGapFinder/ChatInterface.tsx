@@ -333,8 +333,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <Card className="border-none shadow-none bg-transparent flex flex-col h-full">
-      <CardHeader className="p-4 flex justify-between items-center">
+    <div className="flex flex-col h-full bg-zinc-900/80 rounded-md overflow-hidden">
+      <CardHeader className="p-4 flex justify-between items-center bg-zinc-900 border-b border-zinc-800">
         <CardTitle className="text-lg text-white">
           Opportunity Strategist
         </CardTitle>
@@ -350,8 +350,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
       </CardHeader>
       
-      <CardContent className="flex-1 p-4 pt-0 overflow-hidden">
-        <ScrollArea className="h-[400px] pr-4">
+      {/* Main chat area */}
+      <div className="flex-grow overflow-hidden p-4 pt-0">
+        <ScrollArea className="h-[calc(100%-60px)] pr-4 py-4">
           <div className="flex flex-col space-y-4">
             {messages.map((message, index) => (
               <div
@@ -393,8 +394,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         </ScrollArea>
         
+        {/* Example prompts section */}
         {messages.length === 1 && (
-          <div className="mt-6 space-y-2">
+          <div className="my-4 space-y-2">
             <p className="text-sm text-zinc-400 mb-2">Try asking about:</p>
             <div className="flex flex-col space-y-2">
               {examplePrompts.map((prompt, index) => (
@@ -413,6 +415,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         )}
 
+        {/* Error notification */}
         {apiErrorCount > 1 && (
           <div className="mt-4 p-3 bg-red-900/20 border border-red-800 rounded-md">
             <div className="flex items-start">
@@ -427,8 +430,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         )}
 
+        {/* Data ready notification */}
         {uploadedFiles && uploadedFiles.length > 0 && keywordData && (
-          <div className="mt-4 p-3 bg-green-900/20 border border-green-800 rounded-md">
+          <div className="my-4 p-3 bg-green-900/20 border border-green-800 rounded-md">
             <div className="flex items-start">
               <TrendingUp className="h-5 w-5 text-green-400 mr-2 mt-0.5" />
               <div>
@@ -440,10 +444,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </div>
         )}
-      </CardContent>
+      </div>
       
-      <CardFooter className="p-4 pt-0">
-        <div className="flex w-full items-center space-x-2">
+      {/* Input area - fixed at bottom */}
+      <div className="p-4 mt-auto border-t border-zinc-800 bg-zinc-900/80">
+        <div className="flex items-center space-x-2">
           <Input
             type="text"
             placeholder="Ask about missed opportunities..."
@@ -468,7 +473,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             )}
           </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
