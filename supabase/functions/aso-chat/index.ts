@@ -18,6 +18,11 @@ serve(async (req) => {
   try {
     const { messages, uploadedFiles } = await req.json();
     
+    // Validate the API key
+    if (!openAIApiKey || openAIApiKey.trim() === '') {
+      throw new Error('OpenAI API key is missing');
+    }
+    
     // Create a system prompt focused on ASO and growth gap finding
     const systemPrompt = {
       role: 'system',
@@ -49,41 +54,67 @@ serve(async (req) => {
     // Create the final messages array with the system prompt
     const completeMessages = [systemPrompt, ...messages];
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: completeMessages,
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
-    });
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: completeMessages,
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('OpenAI API error response:', errorData);
+        
+        // Check for common OpenAI errors
+        if (errorData.error?.type === 'invalid_request_error') {
+          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Invalid request'}`);
+        } else if (errorData.error?.type === 'authentication_error') {
+          throw new Error('OpenAI API error: Authentication failed. The API key may be invalid.');
+        } else if (errorData.error?.message?.includes('billing')) {
+          throw new Error('OpenAI API error: There appears to be a billing issue with your OpenAI account.');
+        } else {
+          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+        }
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      const data = await response.json();
+      const assistantMessage = data.choices[0].message.content;
+
+      return new Response(JSON.stringify({ 
+        message: assistantMessage,
+        insight: detectInsightRecommendation(assistantMessage)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (openAIError) {
+      console.error('Error calling OpenAI API:', openAIError);
+      
+      // Provide a fallback response
+      return new Response(JSON.stringify({ 
+        message: "I'm currently experiencing technical difficulties connecting to my knowledge base. Please try again later or try one of our pre-built insight modules for ASO analysis.",
+        insight: null,
+        error: openAIError.message
+      }), {
+        status: 200, // Return 200 status to prevent cascading errors in the frontend
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    const data = await response.json();
-    const assistantMessage = data.choices[0].message.content;
-
-    return new Response(JSON.stringify({ 
-      message: assistantMessage,
-      insight: detectInsightRecommendation(assistantMessage)
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error in aso-chat function:', error);
+    
     return new Response(JSON.stringify({ 
       error: error.message,
-      message: "I'm sorry, I encountered an error processing your request. Please try again." 
+      message: "I'm sorry, I encountered an error processing your request. Please try again or use one of our pre-built insight modules." 
     }), {
-      status: 500,
+      status: 200, // Return 200 status to prevent cascading errors in the frontend
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

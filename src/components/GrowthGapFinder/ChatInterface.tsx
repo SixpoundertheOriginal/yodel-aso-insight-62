@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Upload, BarChart, TrendingUp, Loader2 } from "lucide-react";
+import { Send, Upload, BarChart, TrendingUp, Loader2, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  error?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -32,6 +33,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [apiErrorCount, setApiErrorCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const examplePrompts = [
@@ -98,7 +100,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       });
 
       if (error) {
+        console.error("Error calling ASO chat function:", error);
         throw new Error(error.message);
+      }
+
+      // Check if the response contains an error message from the OpenAI API
+      if (data.error && data.error.includes("OpenAI API error")) {
+        setApiErrorCount(prev => prev + 1);
+        
+        // Add error message as assistant response
+        const errorMessage: ChatMessage = {
+          role: "assistant",
+          content: data.message || "I'm having trouble connecting to my knowledge base. Please try using one of the insight modules instead.",
+          timestamp: new Date(),
+          error: true
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+        
+        // Show a toast with the error
+        toast({
+          title: "AI Service Issue",
+          description: "There's a problem with the AI service. Try using the pre-built insight modules on the right.",
+          variant: "destructive",
+          duration: 5000,
+        });
+        
+        return;
       }
 
       // Process the response
@@ -109,6 +137,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Reset error count on successful message
+      if (apiErrorCount > 0) {
+        setApiErrorCount(0);
+      }
 
       // If the AI detected a recommended insight, trigger it
       if (data.insight) {
@@ -127,15 +160,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       // Add error message
       const errorMessage: ChatMessage = {
         role: "assistant",
-        content: "I'm sorry, I encountered an error processing your request. Please try again.",
+        content: "I'm sorry, I encountered an error processing your request. Please try using one of the insight modules instead.",
         timestamp: new Date(),
+        error: true
       };
       
       setMessages(prev => [...prev, errorMessage]);
+      setApiErrorCount(prev => prev + 1);
       
       toast({
         title: "Error",
-        description: "Failed to process your message. Please try again.",
+        description: "Failed to process your message. Please try again or use the insight modules.",
         variant: "destructive",
         duration: 5000,
       });
@@ -157,10 +192,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // Trigger the insight selection
     onInsightSelect(prompt.insight);
 
+    // If we've had API errors, skip calling the API and just add a generic response
+    if (apiErrorCount > 1) {
+      setTimeout(() => {
+        const assistantMessage: ChatMessage = {
+          role: "assistant",
+          content: `I'll help you with that. Let me run a ${prompt.insight} analysis for you.`,
+          timestamp: new Date(),
+        };
+        
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsLoading(false);
+      }, 800);
+      return;
+    }
+
     // Use the new AI function for example prompts too
     setIsLoading(true);
     
-    // Simulate assistant response for example prompts
+    // Process example prompts through the API
     setTimeout(async () => {
       try {
         const { data, error } = await supabase.functions.invoke('aso-chat', {
@@ -176,6 +226,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         if (error) throw new Error(error.message);
 
+        // Check if the response contains an error message from the OpenAI API
+        if (data.error && data.error.includes("OpenAI API error")) {
+          const fallbackMessage: ChatMessage = {
+            role: "assistant",
+            content: `I'll help you with that. Let me run a ${prompt.insight} analysis for you.`,
+            timestamp: new Date(),
+          };
+          
+          setMessages((prev) => [...prev, fallbackMessage]);
+          setApiErrorCount(prev => prev + 1);
+          return;
+        }
+
         const assistantMessage: ChatMessage = {
           role: "assistant",
           content: data.message || `I'll help you with that. Let me run a ${prompt.insight} analysis for you.`,
@@ -183,6 +246,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         };
         
         setMessages((prev) => [...prev, assistantMessage]);
+        
+        // Reset error count on successful message
+        if (apiErrorCount > 0) {
+          setApiErrorCount(0);
+        }
       } catch (error) {
         console.error("Error in example prompt:", error);
         
@@ -193,6 +261,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         };
         
         setMessages((prev) => [...prev, fallbackMessage]);
+        setApiErrorCount(prev => prev + 1);
       } finally {
         setIsLoading(false);
       }
@@ -221,9 +290,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className={`max-w-[80%] rounded-lg p-3 ${
                     message.role === "user"
                       ? "bg-yodel-orange text-white"
-                      : "bg-zinc-800 text-zinc-100"
+                      : message.error 
+                        ? "bg-red-900/70 text-red-100" 
+                        : "bg-zinc-800 text-zinc-100"
                   }`}
                 >
+                  {message.error && (
+                    <div className="flex items-center mb-2">
+                      <AlertCircle className="h-4 w-4 mr-2 text-red-200" />
+                      <span className="text-red-200 text-sm font-semibold">AI Service Issue</span>
+                    </div>
+                  )}
                   {message.content}
                 </div>
               </div>
@@ -261,6 +338,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </div>
         )}
+
+        {apiErrorCount > 1 && (
+          <div className="mt-4 p-3 bg-red-900/20 border border-red-800 rounded-md">
+            <div className="flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-400 mr-2 mt-0.5" />
+              <div>
+                <h4 className="text-red-400 font-medium">AI Service Unavailable</h4>
+                <p className="text-red-300 text-sm">
+                  There seems to be an issue with the AI service. Please try the pre-built insight modules instead.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
       
       <CardFooter className="p-4 pt-0">
@@ -274,13 +365,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onKeyPress={(e) => {
               if (e.key === "Enter") handleSendMessage();
             }}
-            disabled={isLoading}
+            disabled={isLoading || apiErrorCount > 1}
           />
           <Button 
             size="icon" 
             className="bg-yodel-orange hover:bg-yodel-orange/90"
             onClick={handleSendMessage}
-            disabled={isLoading}
+            disabled={isLoading || apiErrorCount > 1}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
