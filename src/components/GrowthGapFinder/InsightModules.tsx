@@ -9,15 +9,22 @@ import {
   LineChart, 
   Zap, 
   Eye, 
-  Target
+  Target,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface InsightModuleProps {
   onInsightSelect: (insightType: string) => void;
+  selectedInsight?: string | null;
+  isAnalyzing?: boolean;
 }
 
-export const InsightModules: React.FC<InsightModuleProps> = ({ onInsightSelect }) => {
+export const InsightModules: React.FC<InsightModuleProps> = ({ 
+  onInsightSelect, 
+  selectedInsight = null,
+  isAnalyzing = false
+}) => {
   const insights = [
     {
       id: "MissedImpressions",
@@ -82,27 +89,46 @@ export const InsightModules: React.FC<InsightModuleProps> = ({ onInsightSelect }
       </CardHeader>
       
       <CardContent className="p-4 pt-0 grid grid-cols-1 gap-4">
-        {insights.map((insight) => (
-          <div
-            key={insight.id}
-            className={`rounded-lg border p-4 cursor-pointer transition-all hover:scale-[1.01] ${insight.borderColor} bg-gradient-to-br ${insight.color}`}
-            onClick={() => onInsightSelect(insight.id)}
-          >
-            <div className="flex items-start space-x-3">
-              <div className={`rounded-full p-2 ${insight.textColor} bg-zinc-900/40`}>
-                {insight.icon}
-              </div>
-              <div>
-                <h3 className={`font-medium mb-1 ${insight.textColor}`}>
-                  {insight.title}
-                </h3>
-                <p className="text-sm text-zinc-400">
-                  {insight.description}
-                </p>
+        {insights.map((insight) => {
+          const isSelected = selectedInsight === insight.id;
+          const isLoading = isAnalyzing && isSelected;
+          
+          return (
+            <div
+              key={insight.id}
+              className={`rounded-lg border p-4 cursor-pointer transition-all 
+                ${isSelected 
+                  ? `border-${insight.textColor} ring-1 ring-${insight.textColor} scale-[1.02]` 
+                  : insight.borderColor} 
+                bg-gradient-to-br ${insight.color}
+                ${isAnalyzing && !isSelected ? 'opacity-50' : 'hover:scale-[1.01]'}`}
+              onClick={() => !isAnalyzing && onInsightSelect(insight.id)}
+            >
+              <div className="flex items-start space-x-3">
+                <div className={`rounded-full p-2 ${insight.textColor} bg-zinc-900/40`}>
+                  {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    insight.icon
+                  )}
+                </div>
+                <div>
+                  <h3 className={`font-medium mb-1 ${insight.textColor} flex items-center`}>
+                    {insight.title}
+                    {isSelected && isAnalyzing && (
+                      <span className="ml-2 text-xs bg-zinc-900/80 px-2 py-0.5 rounded-full">
+                        Analyzing...
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-sm text-zinc-400">
+                    {insight.description}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );

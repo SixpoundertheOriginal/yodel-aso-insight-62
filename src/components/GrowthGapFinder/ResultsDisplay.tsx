@@ -1,12 +1,13 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Download, FileDown, Share2 } from "lucide-react";
+import { Download, FileDown, Share2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 
 interface ResultsDisplayProps {
   results: any | null;
+  isLoading?: boolean;
 }
 
 // Sample data for visualization
@@ -18,7 +19,25 @@ const chartData = [
   { name: "Unknown", value: 4200 }
 ];
 
-export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
+export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoading = false }) => {
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="border-none shadow-none bg-transparent flex items-center justify-center h-full">
+        <CardContent className="p-6 text-center">
+          <div className="text-yodel-orange mb-4">
+            <Loader2 className="w-12 h-12 mx-auto animate-spin" />
+          </div>
+          <h3 className="text-lg font-medium text-zinc-300 mb-1">Analyzing Your Data</h3>
+          <p className="text-sm text-zinc-500 max-w-xs mx-auto">
+            We're processing your data and generating insights. This may take a moment...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Empty state
   if (!results) {
     return (
       <Card className="border-none shadow-none bg-transparent flex items-center justify-center h-full">
