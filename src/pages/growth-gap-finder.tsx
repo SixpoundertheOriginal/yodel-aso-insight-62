@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "@/layouts";
 import { ChatInterface } from "@/components/GrowthGapFinder/ChatInterface";
 import { FileUploadSection } from "@/components/GrowthGapFinder/FileUploadSection";
@@ -38,6 +38,7 @@ const GrowthGapFinderPage = () => {
   const [keywordData, setKeywordData] = useState<string | null>(null);
   const [parsedKeywords, setParsedKeywords] = useState<KeywordData[]>([]);
   const [selectedApp, setSelectedApp] = useState<AppDetails | null>(null);
+  const [keywordsUploaded, setKeywordsUploaded] = useState<boolean>(false);
   
   // Parse keyword data whenever it changes
   useEffect(() => {
@@ -47,8 +48,11 @@ const GrowthGapFinderPage = () => {
         setParsedKeywords(parsed);
         console.log(`Parsed ${parsed.length} keywords for analysis`);
         
-        // Show a toast notification when keywords are successfully parsed
+        // Set keywords uploaded flag when successfully parsed
         if (parsed.length > 0) {
+          setKeywordsUploaded(true);
+          
+          // Show a toast notification when keywords are successfully parsed
           toast({
             title: "Keywords Ready",
             description: `${parsed.length} keywords parsed and ready for analysis.`,
@@ -65,8 +69,16 @@ const GrowthGapFinderPage = () => {
     }
   }, [keywordData]);
 
-  // Function to handle workflow step navigation
+  // Function to check if keywords are available
+  const hasKeywords = useCallback(() => {
+    return keywordsUploaded && parsedKeywords.length > 0;
+  }, [keywordsUploaded, parsedKeywords]);
+  
+  // Function to handle workflow step navigation - now uses the hasKeywords callback
   const navigateToStep = (step: string) => {
+    console.log(`Attempting to navigate to step: ${step}`);
+    console.log(`Current state - keywordsUploaded: ${keywordsUploaded}, parsedKeywords: ${parsedKeywords.length}, selectedApp: ${!!selectedApp}`);
+    
     // Only allow navigating to a step if prerequisites are met
     if (step === "upload" && !selectedApp) {
       toast({
@@ -76,7 +88,7 @@ const GrowthGapFinderPage = () => {
       return;
     }
     
-    if (step === "insights" && (!keywordData || parsedKeywords.length === 0)) {
+    if (step === "insights" && !hasKeywords()) {
       toast({
         title: "Upload keywords first",
         description: "Please upload keyword data before proceeding to insights.",
@@ -92,6 +104,8 @@ const GrowthGapFinderPage = () => {
       return;
     }
     
+    // If all checks pass, navigate to the selected step
+    console.log(`Navigation to ${step} allowed`);
     setActiveTab(step);
   };
   
@@ -106,7 +120,9 @@ const GrowthGapFinderPage = () => {
         const reader = new FileReader();
         reader.onload = (e) => {
           if (e.target?.result) {
-            setKeywordData(e.target.result as string);
+            // Set keyword data state
+            const data = e.target.result as string;
+            setKeywordData(data);
             
             // Reset results when new files are uploaded
             setResults(null);
@@ -114,11 +130,17 @@ const GrowthGapFinderPage = () => {
             
             toast({
               title: "Data Ready",
-              description: `${files.length} file(s) uploaded successfully. You can now analyze your keyword data.`,
+              description: `${files.length} file(s) uploaded successfully. Processing keyword data...`,
             });
             
-            // Always navigate to insights tab after successful file upload
-            setActiveTab("insights");
+            // Use setTimeout to ensure the keywords are processed before navigation
+            setTimeout(() => {
+              // Only navigate if keywords were actually parsed
+              if (parsedKeywords.length > 0 || parseKeywordData(data).length > 0) {
+                console.log("Navigating to insights after file upload");
+                navigateToStep("insights");
+              }
+            }, 500);
           }
         };
         reader.readAsText(file);
@@ -240,7 +262,7 @@ const GrowthGapFinderPage = () => {
           description: `${formatInsightName(insightType)} analysis completed successfully.`,
         });
         
-        // Switch to results tab after analysis is complete
+        // Switch to results tab after analysis is complete - Using navigateToStep for consistency
         navigateToStep("results");
       } catch (error) {
         console.error('Error analyzing data:', error);
@@ -476,8 +498,8 @@ const GrowthGapFinderPage = () => {
         description: `${formatInsightName(insightType)} analysis completed successfully.`,
       });
       
-      // Switch to results tab after analysis is complete
-      setActiveTab("results");
+      // Switch to results tab after analysis is complete - Use navigateToStep for consistency
+      navigateToStep("results");
     }, analysisDuration);
   };
   
@@ -546,7 +568,7 @@ const GrowthGapFinderPage = () => {
               <TabsTrigger value="upload" className="data-[state=active]:bg-zinc-700" disabled={!selectedApp}>
                 2. Keyword Upload
               </TabsTrigger>
-              <TabsTrigger value="insights" className="data-[state=active]:bg-zinc-700" disabled={!keywordData}>
+              <TabsTrigger value="insights" className="data-[state=active]:bg-zinc-700" disabled={!keywordsUploaded}>
                 3. Insights
               </TabsTrigger>
               <TabsTrigger value="results" className="data-[state=active]:bg-zinc-700" disabled={!results}>
@@ -637,3 +659,4 @@ const GrowthGapFinderPage = () => {
 };
 
 export default GrowthGapFinderPage;
+

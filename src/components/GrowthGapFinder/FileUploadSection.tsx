@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,11 +78,6 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
     onFilesUploaded([fileToUse]);
     
     setLoading(false);
-    
-    toast({
-      title: "File Uploaded",
-      description: `"${fileToUse.name}" uploaded successfully.`,
-    });
   };
 
   const handleOpenFileDialog = () => {
