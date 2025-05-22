@@ -64,11 +64,11 @@ export const AppStoreScraper: React.FC<AppStoreScraperProps> = ({
         throw new Error("Failed to fetch results");
       }
 
-      const data = await response.json();
+      const data: { results?: AppDetails[] } = await response.json();
       setResults(data.results || []);
 
       // Fetch detailed info for each app
-      for (const app of data.results) {
+      for (const app of data.results || []) {
         try {
           const lookupRes = await fetch(
             `https://itunes.apple.com/lookup?id=${app.trackId}`
@@ -79,7 +79,7 @@ export const AppStoreScraper: React.FC<AppStoreScraperProps> = ({
           }
 
           const text = await lookupRes.text();
-          let lookupData = {};
+          let lookupData: { results?: AppDetails[] } = {};
           
           try {
             lookupData = JSON.parse(text);

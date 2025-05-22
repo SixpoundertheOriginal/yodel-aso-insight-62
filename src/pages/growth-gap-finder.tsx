@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { MainLayout } from "@/layouts";
 import { ChatInterface } from "@/components/GrowthGapFinder/ChatInterface";
@@ -21,7 +20,8 @@ import {
   analyzeMetadataSuggestions,
   analyzeGrowthOpportunity,
   analyzeQuickWins,
-  analyzeMissedImpressions
+  analyzeMissedImpressions,
+  AppContext as AppKeywordContext
 } from "@/utils/keywordAnalysis";
 
 const GrowthGapFinderPage = () => {
