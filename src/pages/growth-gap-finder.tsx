@@ -5,7 +5,11 @@ import { ChatInterface } from "@/components/GrowthGapFinder/ChatInterface";
 import { FileUploadSection } from "@/components/GrowthGapFinder/FileUploadSection";
 import { InsightModules } from "@/components/GrowthGapFinder/InsightModules";
 import { ResultsDisplay } from "@/components/GrowthGapFinder/ResultsDisplay";
+import { AppStoreScraper, AppDetails } from "@/components/GrowthGapFinder/AppStoreScraper";
+import { AppDetailsView } from "@/components/GrowthGapFinder/AppDetailsView";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppProvider } from "@/context/AppContext";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -21,11 +25,13 @@ import {
 } from "@/utils/keywordAnalysis";
 
 const GrowthGapFinderPage = () => {
+  const [activeTab, setActiveTab] = useState<string>("app-search");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
   const [results, setResults] = useState<any | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [keywordData, setKeywordData] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<AppDetails | null>(null);
   
   const handleFileUpload = (files: File[]) => {
     console.log("Files uploaded:", files);
@@ -43,6 +49,11 @@ const GrowthGapFinderPage = () => {
               title: "Data Ready",
               description: `${files.length} file(s) uploaded successfully. You can now analyze your keyword data.`,
             });
+            
+            // If an app is selected, move to insights tab
+            if (selectedApp) {
+              setActiveTab("insights");
+            }
           }
         };
         reader.readAsText(file);
@@ -54,6 +65,16 @@ const GrowthGapFinderPage = () => {
         });
       }
     }
+  };
+  
+  const handleSelectApp = (app: AppDetails) => {
+    setSelectedApp(app);
+    // Move to the upload tab if an app is selected
+    setActiveTab("upload");
+    toast({
+      title: "App Selected",
+      description: `"${app.trackName}" selected for analysis. Please upload keyword data next.`,
+    });
   };
   
   const handleInsightSelect = async (insightType: string) => {
@@ -69,41 +90,56 @@ const GrowthGapFinderPage = () => {
         
         let resultData;
         
-        // Try to do local analysis first
+        // Try to do local analysis first, now with app context if available
         if (parsedKeywords.length > 0) {
+          const appContext = selectedApp ? {
+            name: selectedApp.trackName,
+            developer: selectedApp.sellerName,
+            category: selectedApp.primaryGenreName || 'Unknown',
+            rating: selectedApp.averageUserRating || 0,
+            ratingCount: selectedApp.userRatingCount || 0,
+          } : undefined;
+          
           switch(insightType) {
             case "BrandVsGeneric":
-              resultData = analyzeBrandVsGeneric(parsedKeywords);
+              resultData = analyzeBrandVsGeneric(parsedKeywords, appContext);
               break;
               
             case "CompetitorComparison":
-              resultData = analyzeCompetitorComparison(parsedKeywords);
+              resultData = analyzeCompetitorComparison(parsedKeywords, appContext);
               break;
               
             case "MetadataSuggestions":
-              resultData = analyzeMetadataSuggestions(parsedKeywords);
+              resultData = analyzeMetadataSuggestions(parsedKeywords, appContext);
               break;
               
             case "GrowthOpportunity":
-              resultData = analyzeGrowthOpportunity(parsedKeywords);
+              resultData = analyzeGrowthOpportunity(parsedKeywords, appContext);
               break;
               
             case "QuickWins":
-              resultData = analyzeQuickWins(parsedKeywords);
+              resultData = analyzeQuickWins(parsedKeywords, appContext);
               break;
               
             case "MissedImpressions":
-              resultData = analyzeMissedImpressions(parsedKeywords);
+              resultData = analyzeMissedImpressions(parsedKeywords, appContext);
               break;
           }
         }
         
-        // If local analysis isn't available or fails, try the edge function
+        // If local analysis isn't available or fails, try the edge function with app context
         if (!resultData) {
           const { data, error } = await supabase.functions.invoke('aso-chat', {
             body: {
               insightType,
               keywordData,
+              appDetails: selectedApp ? {
+                name: selectedApp.trackName,
+                developer: selectedApp.sellerName,
+                category: selectedApp.primaryGenreName || 'Unknown',
+                rating: selectedApp.averageUserRating || 0,
+                bundleId: selectedApp.bundleId || 'Unknown',
+              } : null,
               messages: []
             }
           });
@@ -119,13 +155,20 @@ const GrowthGapFinderPage = () => {
         
         setResults({
           type: insightType,
-          data: resultData
+          data: resultData,
+          appInfo: selectedApp ? {
+            name: selectedApp.trackName,
+            icon: selectedApp.artworkUrl100,
+          } : null
         });
         
         toast({
           title: "Analysis Complete",
           description: `${formatInsightName(insightType)} analysis completed successfully.`,
         });
+        
+        // Switch to results tab after analysis is complete
+        setActiveTab("results");
       } catch (error) {
         console.error('Error analyzing data:', error);
         // Fall back to simulated analysis
@@ -142,24 +185,25 @@ const GrowthGapFinderPage = () => {
     // Simulated analysis duration
     const analysisDuration = 2000 + Math.random() * 1500; // Between 2-3.5 seconds
     
-    // Simulate results for each insight type
+    // Simulate results for each insight type, now with app context if available
     setTimeout(() => {
       let resultData;
+      const appName = selectedApp?.trackName || "Your App";
       
       switch(insightType) {
         case "MissedImpressions":
           resultData = {
             title: "Missed Impressions Analysis",
-            summary: "We identified potential missed impressions based on your current keyword rankings.",
+            summary: `We identified potential missed impressions for ${appName} based on your current keyword rankings.`,
             metrics: [
               { label: "Estimated Missed Impressions", value: "~140,000" },
               { label: "Potential Visibility Uplift", value: "+22%" },
               { label: "Optimization Priority", value: "High" }
             ],
             recommendations: [
-              "Target 'fitness tracker' keywords that rank on page 2",
-              "Optimize for 'activity monitor' terms showing growth",
-              "Add 'health analytics' to your app metadata"
+              `Target 'fitness tracker' keywords that rank on page 2`,
+              `Optimize for 'activity monitor' terms showing growth`,
+              `Add 'health analytics' to your app metadata`
             ],
             chartData: [
               { name: "Missing High Volume", value: 82000, fill: "#F97316" },
@@ -301,14 +345,22 @@ const GrowthGapFinderPage = () => {
       
       setResults({
         type: insightType,
-        data: resultData
+        data: resultData,
+        appInfo: selectedApp ? {
+          name: selectedApp.trackName,
+          icon: selectedApp.artworkUrl100,
+        } : null
       });
+      
       setIsAnalyzing(false);
       
       toast({
         title: "Analysis Complete",
         description: `${formatInsightName(insightType)} analysis completed successfully.`,
       });
+      
+      // Switch to results tab after analysis is complete
+      setActiveTab("results");
     }, analysisDuration);
   };
   
@@ -326,53 +378,106 @@ const GrowthGapFinderPage = () => {
   };
   
   return (
-    <MainLayout>
-      <div className="flex flex-col space-y-6">
-        <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-white">
-            <span className="text-yodel-orange mr-2">•</span>
-            Growth Gap Finder
-          </h1>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
-          {/* Left Column - Chat & File Upload */}
-          <div className="lg:col-span-1 flex flex-col space-y-6">
-            <Card className="flex-1 bg-zinc-900/70 border-zinc-800 shadow-lg">
-              <ChatInterface 
-                onInsightSelect={handleInsightSelect} 
-                uploadedFiles={uploadedFiles}
-              />
-            </Card>
+    <AppProvider>
+      <MainLayout>
+        <div className="flex flex-col space-y-6">
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold text-white">
+              <span className="text-yodel-orange mr-2">•</span>
+              Growth Gap Finder
+            </h1>
+          </div>
+          
+          {/* Main Tabs for the workflow */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="bg-zinc-800 border border-zinc-700">
+              <TabsTrigger value="app-search" className="data-[state=active]:bg-zinc-700">
+                1. App Search
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="data-[state=active]:bg-zinc-700" disabled={!selectedApp}>
+                2. Keyword Upload
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="data-[state=active]:bg-zinc-700" disabled={!keywordData}>
+                3. Insights
+              </TabsTrigger>
+              <TabsTrigger value="results" className="data-[state=active]:bg-zinc-700" disabled={!results}>
+                4. Results
+              </TabsTrigger>
+            </TabsList>
             
-            <Card className="bg-zinc-900/70 border-zinc-800 shadow-lg">
-              <FileUploadSection onFilesUploaded={handleFileUpload} />
-            </Card>
-          </div>
-          
-          {/* Middle Column - Insight Modules */}
-          <div className="lg:col-span-1">
-            <Card className="h-full bg-zinc-900/70 border-zinc-800 shadow-lg">
-              <InsightModules 
-                onInsightSelect={handleInsightSelect}
-                selectedInsight={selectedInsight}
-                isAnalyzing={isAnalyzing}
-              />
-            </Card>
-          </div>
-          
-          {/* Right Column - Results Display */}
-          <div className="lg:col-span-1">
-            <Card className="h-full bg-zinc-900/70 border-zinc-800 shadow-lg overflow-auto">
-              <ResultsDisplay 
-                results={results} 
-                isLoading={isAnalyzing} 
-              />
-            </Card>
-          </div>
+            {/* App Search Tab Content */}
+            <TabsContent value="app-search" className="pt-2 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-16rem)]">
+                <Card className="bg-zinc-900/70 border-zinc-800 shadow-lg overflow-hidden">
+                  <AppStoreScraper onSelectApp={handleSelectApp} selectedAppId={selectedApp?.trackId} />
+                </Card>
+                <Card className="bg-zinc-900/70 border-zinc-800 shadow-lg overflow-hidden">
+                  <AppDetailsView appDetails={selectedApp} />
+                </Card>
+              </div>
+            </TabsContent>
+            
+            {/* Upload Tab Content */}
+            <TabsContent value="upload" className="pt-2 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-16rem)]">
+                <Card className="bg-zinc-900/70 border-zinc-800 shadow-lg">
+                  <ChatInterface 
+                    onInsightSelect={handleInsightSelect} 
+                    uploadedFiles={uploadedFiles}
+                    selectedApp={selectedApp}
+                  />
+                </Card>
+                <Card className="bg-zinc-900/70 border-zinc-800 shadow-lg">
+                  <FileUploadSection 
+                    onFilesUploaded={handleFileUpload}
+                    selectedApp={selectedApp}
+                  />
+                </Card>
+              </div>
+            </TabsContent>
+            
+            {/* Insights Tab Content */}
+            <TabsContent value="insights" className="pt-2 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-16rem)]">
+                <div className="lg:col-span-1">
+                  <Card className="h-full bg-zinc-900/70 border-zinc-800 shadow-lg">
+                    <InsightModules 
+                      onInsightSelect={handleInsightSelect}
+                      selectedInsight={selectedInsight}
+                      isAnalyzing={isAnalyzing}
+                      selectedApp={selectedApp}
+                    />
+                  </Card>
+                </div>
+                <div className="lg:col-span-2">
+                  <Card className="h-full bg-zinc-900/70 border-zinc-800 shadow-lg overflow-auto">
+                    <ResultsDisplay 
+                      results={results} 
+                      isLoading={isAnalyzing}
+                      selectedApp={selectedApp}
+                    />
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+            
+            {/* Results Tab Content */}
+            <TabsContent value="results" className="pt-2 w-full">
+              <div className="h-[calc(100vh-16rem)]">
+                <Card className="h-full bg-zinc-900/70 border-zinc-800 shadow-lg overflow-auto">
+                  <ResultsDisplay 
+                    results={results} 
+                    isLoading={isAnalyzing}
+                    selectedApp={selectedApp}
+                    showFullResults={true}
+                  />
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
-    </MainLayout>
+      </MainLayout>
+    </AppProvider>
   );
 };
 

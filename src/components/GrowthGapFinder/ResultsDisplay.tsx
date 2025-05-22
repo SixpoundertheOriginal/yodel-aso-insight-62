@@ -15,6 +15,7 @@ import {
   Pie, 
   Legend 
 } from "recharts";
+import { AppDetails } from "./AppStoreScraper";
 
 interface Metric {
   label: string;
@@ -33,11 +34,22 @@ interface ResultsDisplayProps {
   results: {
     type: string;
     data: ResultData;
+    appInfo?: {
+      name: string;
+      icon: string;
+    };
   } | null;
   isLoading?: boolean;
+  selectedApp?: AppDetails | null;
+  showFullResults?: boolean;
 }
 
-export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoading = false }) => {
+export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ 
+  results, 
+  isLoading = false, 
+  selectedApp = null,
+  showFullResults = false
+}) => {
   // Loading state
   if (isLoading) {
     return (
@@ -46,7 +58,9 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
           <div className="text-yodel-orange mb-4">
             <Loader2 className="w-12 h-12 mx-auto animate-spin" />
           </div>
-          <h3 className="text-lg font-medium text-zinc-300 mb-1">Analyzing Your Data</h3>
+          <h3 className="text-lg font-medium text-zinc-300 mb-1">
+            Analyzing {selectedApp ? selectedApp.trackName : 'Your Data'}
+          </h3>
           <p className="text-sm text-zinc-500 max-w-xs mx-auto">
             We're processing your data and generating insights. This may take a moment...
           </p>
@@ -77,7 +91,10 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
           </div>
           <h3 className="text-lg font-medium text-zinc-300 mb-1">No Analysis Results Yet</h3>
           <p className="text-sm text-zinc-500 max-w-xs mx-auto">
-            Upload your keyword data and select an insight module to see analysis results here.
+            {selectedApp 
+              ? `Upload keyword data for ${selectedApp.trackName} and select an insight module to see analysis results here.`
+              : `Upload your keyword data and select an insight module to see analysis results here.`
+            }
           </p>
         </CardContent>
       </Card>
@@ -163,9 +180,23 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
   return (
     <Card className="border-none shadow-none bg-transparent h-full overflow-auto">
       <CardHeader className="p-4 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg text-white">
-          {results.data.title}
-        </CardTitle>
+        <div className="flex items-center space-x-3">
+          {results.appInfo?.icon && (
+            <img 
+              src={results.appInfo.icon} 
+              alt={results.appInfo.name} 
+              className="w-8 h-8 rounded-md" 
+            />
+          )}
+          <CardTitle className="text-lg text-white">
+            {results.data.title}
+            {results.appInfo?.name && (
+              <span className="ml-2 text-sm font-normal text-zinc-400">
+                for {results.appInfo.name}
+              </span>
+            )}
+          </CardTitle>
+        </div>
         <div className="flex space-x-2">
           <Button
             variant="outline"
@@ -205,14 +236,14 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
         
         <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
           <h3 className="text-md font-medium text-white mb-4">Analysis Visualization</h3>
-          <div className="h-64 flex items-center justify-center">
+          <div className={showFullResults ? "h-80" : "h-64"}>
             <ResponsiveContainer width="100%" height="100%">
               {renderChart()}
             </ResponsiveContainer>
           </div>
         </div>
         
-        <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
+        <div className={`bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4 ${showFullResults ? "max-h-full" : ""}`}>
           <h3 className="text-md font-medium text-white mb-3">Recommendations</h3>
           <ul className="space-y-2 text-sm">
             {results.data.recommendations.map((recommendation: string, index: number) => (
@@ -223,6 +254,66 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
             ))}
           </ul>
         </div>
+        
+        {/* Additional insights for full results view */}
+        {showFullResults && (
+          <>
+            <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
+              <h3 className="text-md font-medium text-white mb-3">Implementation Plan</h3>
+              <div className="space-y-4">
+                <div className="bg-zinc-700/50 p-3 rounded-lg">
+                  <h4 className="text-sm font-medium text-white mb-2">Short-term Actions</h4>
+                  <ul className="space-y-1">
+                    <li className="text-sm text-zinc-300 flex items-start">
+                      <div className="text-green-400 mr-2">•</div>
+                      Update app title with highest-potential keywords
+                    </li>
+                    <li className="text-sm text-zinc-300 flex items-start">
+                      <div className="text-green-400 mr-2">•</div>
+                      Revise screenshots to highlight key features
+                    </li>
+                    <li className="text-sm text-zinc-300 flex items-start">
+                      <div className="text-green-400 mr-2">•</div>
+                      Add missing keywords to subtitle and description
+                    </li>
+                  </ul>
+                </div>
+                
+                <div className="bg-zinc-700/50 p-3 rounded-lg">
+                  <h4 className="text-sm font-medium text-white mb-2">Medium-term Strategy</h4>
+                  <ul className="space-y-1">
+                    <li className="text-sm text-zinc-300 flex items-start">
+                      <div className="text-blue-400 mr-2">•</div>
+                      Focus Apple Search Ads on identified opportunity keywords
+                    </li>
+                    <li className="text-sm text-zinc-300 flex items-start">
+                      <div className="text-blue-400 mr-2">•</div>
+                      Implement rating prompt to increase review volume
+                    </li>
+                    <li className="text-sm text-zinc-300 flex items-start">
+                      <div className="text-blue-400 mr-2">•</div>
+                      Create content targeting high-potential keyword themes
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
+              <h3 className="text-md font-medium text-white mb-3">Growth Impact Forecast</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-zinc-700/50 p-3 rounded-lg text-center">
+                  <p className="text-xs text-zinc-400 mb-1">Estimated 3-Month Visibility Impact</p>
+                  <p className="text-yodel-orange text-xl font-bold">+15-25%</p>
+                </div>
+                <div className="bg-zinc-700/50 p-3 rounded-lg text-center">
+                  <p className="text-xs text-zinc-400 mb-1">Estimated 3-Month Conversion Impact</p>
+                  <p className="text-yodel-orange text-xl font-bold">+8-12%</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

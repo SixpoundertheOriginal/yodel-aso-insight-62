@@ -13,23 +13,28 @@ import {
   Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppDetails } from "./AppStoreScraper";
 
 interface InsightModuleProps {
   onInsightSelect: (insightType: string) => void;
   selectedInsight?: string | null;
   isAnalyzing?: boolean;
+  selectedApp?: AppDetails | null;
 }
 
 export const InsightModules: React.FC<InsightModuleProps> = ({ 
   onInsightSelect, 
   selectedInsight = null,
-  isAnalyzing = false
+  isAnalyzing = false,
+  selectedApp = null
 }) => {
   const insights = [
     {
       id: "MissedImpressions",
       title: "Estimate Missed Impressions",
-      description: "Calculate potential visibility lost due to ranking positions",
+      description: selectedApp 
+        ? `Calculate potential visibility ${selectedApp.trackName} is losing due to ranking positions`
+        : "Calculate potential visibility lost due to ranking positions",
       icon: <Eye className="h-5 w-5" />,
       color: "from-blue-500/20 to-blue-600/20",
       textColor: "text-blue-400",
@@ -38,7 +43,9 @@ export const InsightModules: React.FC<InsightModuleProps> = ({
     {
       id: "BrandVsGeneric",
       title: "Brand vs. Generic Keyword Gaps",
-      description: "Identify opportunities in branded and generic search terms",
+      description: selectedApp 
+        ? `Identify branded and generic search term opportunities for ${selectedApp.trackName}`
+        : "Identify opportunities in branded and generic search terms",
       icon: <Target className="h-5 w-5" />,
       color: "from-yodel-orange/20 to-orange-600/20",
       textColor: "text-yodel-orange",
@@ -47,7 +54,9 @@ export const InsightModules: React.FC<InsightModuleProps> = ({
     {
       id: "CompetitorComparison",
       title: "Compare with Top Competitors",
-      description: "See how your rankings stack up against the top 3 competitors",
+      description: selectedApp 
+        ? `See how ${selectedApp.trackName} ranks against top 3 competitors`
+        : "See how your rankings stack up against the top 3 competitors",
       icon: <TrendingUp className="h-5 w-5" />,
       color: "from-green-500/20 to-green-600/20",
       textColor: "text-green-400",
@@ -56,7 +65,9 @@ export const InsightModules: React.FC<InsightModuleProps> = ({
     {
       id: "MetadataSuggestions",
       title: "Draft Metadata Suggestions",
-      description: "Get optimization recommendations for your app metadata",
+      description: selectedApp 
+        ? `Get optimization recommendations for ${selectedApp.trackName}'s metadata`
+        : "Get optimization recommendations for your app metadata",
       icon: <Edit className="h-5 w-5" />,
       color: "from-purple-500/20 to-purple-600/20",
       textColor: "text-purple-400",
@@ -74,7 +85,9 @@ export const InsightModules: React.FC<InsightModuleProps> = ({
     {
       id: "QuickWins",
       title: "Identify Quick Wins",
-      description: "Find low-effort, high-impact optimization opportunities",
+      description: selectedApp 
+        ? `Find high-impact, low-effort opportunities for ${selectedApp.trackName}`
+        : "Find low-effort, high-impact optimization opportunities",
       icon: <Zap className="h-5 w-5" />,
       color: "from-yellow-500/20 to-yellow-600/20",
       textColor: "text-yellow-400",
@@ -84,8 +97,18 @@ export const InsightModules: React.FC<InsightModuleProps> = ({
 
   return (
     <Card className="border-none shadow-none bg-transparent h-full">
-      <CardHeader className="p-4">
+      <CardHeader className="p-4 flex justify-between items-center">
         <CardTitle className="text-lg text-white">Insight Modules</CardTitle>
+        {selectedApp && (
+          <div className="flex items-center space-x-2">
+            <img 
+              src={selectedApp.artworkUrl100} 
+              alt={selectedApp.trackName} 
+              className="w-6 h-6 rounded-md" 
+            />
+            <span className="text-sm text-zinc-300">{selectedApp.trackName}</span>
+          </div>
+        )}
       </CardHeader>
       
       <CardContent className="p-4 pt-0 grid grid-cols-1 gap-4">

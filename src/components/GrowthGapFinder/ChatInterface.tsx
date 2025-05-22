@@ -7,6 +7,7 @@ import { Send, Upload, BarChart, TrendingUp, Loader2, AlertCircle } from "lucide
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { AppDetails } from "./AppStoreScraper";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -18,38 +19,53 @@ interface ChatMessage {
 interface ChatInterfaceProps {
   onInsightSelect: (insightType: string) => void;
   uploadedFiles?: File[];
+  selectedApp?: AppDetails | null;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   onInsightSelect, 
-  uploadedFiles = [] 
+  uploadedFiles = [],
+  selectedApp = null
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: "👋 Hi there! I'm your ASO Growth Gap Finder. Upload your keyword data or ask me about missed visibility opportunities.",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [apiErrorCount, setApiErrorCount] = useState(0);
   const [keywordData, setKeywordData] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Update welcome message when component mounts or when app changes
+  useEffect(() => {
+    const welcomeMessage = selectedApp 
+      ? `👋 Hi there! I'm your ASO Growth Gap Finder. I'll help analyze growth opportunities for "${selectedApp.trackName}". Please upload your keyword data.`
+      : "👋 Hi there! I'm your ASO Growth Gap Finder. Upload your keyword data or ask me about missed visibility opportunities.";
+    
+    setMessages([{
+      role: "assistant",
+      content: welcomeMessage,
+      timestamp: new Date(),
+    }]);
+  }, [selectedApp]);
+
   const examplePrompts = [
     {
-      text: "Upload your keyword export to analyze missed visibility",
+      text: selectedApp 
+        ? `Upload keyword data for ${selectedApp.trackName}`
+        : "Upload your keyword export to analyze missed visibility",
       icon: <Upload className="h-4 w-4" />,
       insight: "MissedImpressions"
     },
     {
-      text: "Find gaps in our branded keyword coverage",
+      text: selectedApp
+        ? `Find brand keyword gaps for ${selectedApp.trackName}`
+        : "Find gaps in our branded keyword coverage",
       icon: <BarChart className="h-4 w-4" />,
       insight: "BrandVsGeneric"
     },
     {
-      text: "Compare our rankings with top 3 competitors",
+      text: selectedApp
+        ? `Compare ${selectedApp.trackName} with competitors`
+        : "Compare our rankings with top 3 competitors",
       icon: <TrendingUp className="h-4 w-4" />,
       insight: "CompetitorComparison"
     },
@@ -127,12 +143,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           content: msg.content
         }));
 
+      // Add app details if available
+      const appDetails = selectedApp ? {
+        name: selectedApp.trackName,
+        developer: selectedApp.sellerName,
+        category: selectedApp.primaryGenreName || 'Unknown',
+        rating: selectedApp.averageUserRating || 0,
+        bundleId: selectedApp.bundleId || 'Unknown',
+      } : null;
+
       // Call our edge function
       const { data, error } = await supabase.functions.invoke('aso-chat', {
         body: {
           messages: conversationHistory,
           uploadedFiles: fileInfos,
-          keywordData: keywordData // Send parsed keyword data
+          keywordData: keywordData, // Send parsed keyword data
+          appDetails // Send app details if available
         }
       });
 
@@ -308,10 +334,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <Card className="border-none shadow-none bg-transparent flex flex-col h-full">
-      <CardHeader className="p-4">
+      <CardHeader className="p-4 flex justify-between items-center">
         <CardTitle className="text-lg text-white">
           Opportunity Strategist
         </CardTitle>
+        {selectedApp && (
+          <div className="flex items-center space-x-2">
+            <img 
+              src={selectedApp.artworkUrl100} 
+              alt={selectedApp.trackName} 
+              className="w-6 h-6 rounded-md" 
+            />
+            <span className="text-sm text-zinc-300">{selectedApp.trackName}</span>
+          </div>
+        )}
       </CardHeader>
       
       <CardContent className="flex-1 p-4 pt-0 overflow-hidden">
