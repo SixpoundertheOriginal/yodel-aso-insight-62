@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppProvider } from "@/context/AppContext";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import TopBar from "@/components/TopBar";
 
 // Import our keyword analysis utilities
 import { 
@@ -464,17 +465,35 @@ const GrowthGapFinderPage = () => {
   return (
     <AppProvider>
       <MainLayout>
-        <div className="flex flex-col space-y-6">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-white">
-              <span className="text-yodel-orange mr-2">•</span>
-              Growth Gap Finder
-            </h1>
+        <div className="flex flex-col space-y-4">
+          <TopBar title="Growth Gap Finder" />
+          
+          {/* Main workflow steps indicator */}
+          <div className="flex items-center justify-center bg-zinc-900/70 rounded-lg p-3 border border-zinc-700">
+            <div className={`flex items-center px-3 py-1 ${activeTab === "app-search" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+              <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">1.</span>
+              <span>App Search</span>
+            </div>
+            <div className="text-zinc-500 mx-2">→</div>
+            <div className={`flex items-center px-3 py-1 ${activeTab === "upload" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+              <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">2.</span>
+              <span>Keyword Upload</span>
+            </div>
+            <div className="text-zinc-500 mx-2">→</div>
+            <div className={`flex items-center px-3 py-1 ${activeTab === "insights" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+              <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">3.</span>
+              <span>Insights</span>
+            </div>
+            <div className="text-zinc-500 mx-2">→</div>
+            <div className={`flex items-center px-3 py-1 ${activeTab === "results" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+              <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">4.</span>
+              <span>Results</span>
+            </div>
           </div>
           
           {/* Main Tabs for the workflow */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-zinc-800 border border-zinc-700">
+            <TabsList className="bg-zinc-800 border border-zinc-700 hidden">
               <TabsTrigger value="app-search" className="data-[state=active]:bg-zinc-700">
                 1. App Search
               </TabsTrigger>

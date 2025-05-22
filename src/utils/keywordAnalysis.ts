@@ -1,4 +1,3 @@
-
 // This file exists but we're adding proper type definitions for the functions
 
 export interface KeywordData {
@@ -6,6 +5,12 @@ export interface KeywordData {
   volume: number;
   position?: number;
   difficulty?: number;
+  maxReach?: number;  // Added from user's data structure
+  results?: number;   // Added from user's data structure
+  chance?: number;    // Added from user's data structure
+  kei?: number;       // Added from user's data structure
+  relevancy?: number; // Added from user's data structure
+  rank?: number;      // Added as an alias for position for compatibility
   // Add other keyword properties as needed
 }
 
@@ -38,6 +43,18 @@ export function parseKeywordData(data: string): KeywordData[] {
           entry.position = parseInt(values[i]) || 999;
         } else if (header === 'difficulty') {
           entry.difficulty = parseInt(values[i]) || 50;
+        } else if (header === 'max reach') {
+          entry.maxReach = parseInt(values[i]) || 0;
+        } else if (header === 'results') {
+          entry.results = parseInt(values[i]) || 0;
+        } else if (header === 'chance') {
+          entry.chance = parseFloat(values[i]) || 0;
+        } else if (header === 'kei') {
+          entry.kei = parseInt(values[i]) || 0;
+        } else if (header === 'relevancy') {
+          entry.relevancy = parseInt(values[i]) || 0;
+        } else if (header === 'rank') {
+          entry.rank = parseInt(values[i]) || 999;
         } else {
           entry[header] = values[i]?.trim() || '';
         }
@@ -204,9 +221,15 @@ export function analyzeMissedImpressions(keywords: KeywordData[], appContext?: A
 // New functions for the new modules
 
 export function analyzeRankingOpportunities(keywords: KeywordData[], appContext?: AppContext) {
+  // Map rank to position if it exists instead of position
+  const keywordsWithPosition = keywords.map(kw => ({
+    ...kw,
+    position: kw.position || kw.rank || 999
+  }));
+  
   // Find keywords just outside the top 10 that could be pushed up
-  const keywordsNearTop10 = keywords.filter(kw => kw.position && kw.position > 10 && kw.position <= 30);
-  const keywordsOnPage2 = keywords.filter(kw => kw.position && kw.position > 10 && kw.position <= 20);
+  const keywordsNearTop10 = keywordsWithPosition.filter(kw => kw.position && kw.position > 10 && kw.position <= 30);
+  const keywordsOnPage2 = keywordsWithPosition.filter(kw => kw.position && kw.position > 10 && kw.position <= 20);
   
   return {
     title: "Ranking Improvement Opportunities",
@@ -225,16 +248,29 @@ export function analyzeRankingOpportunities(keywords: KeywordData[], appContext?
     ],
     chartData: [
       { name: "Ranks 11-20", value: keywordsOnPage2.length, fill: "#F97316" },
-      { name: "Ranks 21-50", value: keywords.filter(kw => kw.position && kw.position > 20 && kw.position <= 50).length, fill: "#3B82F6" },
-      { name: "Ranks 51+", value: keywords.filter(kw => kw.position && kw.position > 50).length, fill: "#10B981" }
+      { name: "Ranks 21-50", value: keywordsWithPosition.filter(kw => kw.position && kw.position > 20 && kw.position <= 50).length, fill: "#3B82F6" },
+      { name: "Ranks 51+", value: keywordsWithPosition.filter(kw => kw.position && kw.position > 50).length, fill: "#10B981" }
     ]
   };
 }
 
 export function analyzeKeywordRelevancy(keywords: KeywordData[], appContext?: AppContext) {
-  // This would ideally use NLP to determine keyword relevancy
-  // For this example, we'll simulate the relevancy data
-  const keywordCount = keywords.length;
+  // Process relevancy data or use estimates if relevancy property is missing
+  const keywordsWithRelevancy = keywords.map(kw => ({
+    ...kw,
+    relevancy: kw.relevancy || Math.floor(Math.random() * 100) // Use random placeholder if relevancy not provided
+  }));
+  
+  // Count keywords by relevancy category
+  const highRelevance = keywordsWithRelevancy.filter(k => k.relevancy && k.relevancy >= 80).length;
+  const mediumRelevance = keywordsWithRelevancy.filter(k => k.relevancy && k.relevancy >= 40 && k.relevancy < 80).length;
+  const lowRelevance = keywordsWithRelevancy.filter(k => k.relevancy && k.relevancy < 40).length;
+  const total = keywordsWithRelevancy.length;
+  
+  // Calculate percentages
+  const highRelevancePercent = Math.round((highRelevance / total) * 100);
+  const mediumRelevancePercent = Math.round((mediumRelevance / total) * 100);
+  const lowRelevancePercent = Math.round((lowRelevance / total) * 100);
   
   return {
     title: "Keyword Relevancy Analysis",
@@ -242,9 +278,9 @@ export function analyzeKeywordRelevancy(keywords: KeywordData[], appContext?: Ap
       ? `Analysis of how relevant current keywords are to ${appContext.name} and its features.`
       : "Analysis of how relevant current keywords are to your app and its features.",
     metrics: [
-      { label: "High Relevance", value: "45%" },
-      { label: "Medium Relevance", value: "30%" },
-      { label: "Low Relevance", value: "25%" }
+      { label: "High Relevance", value: `${highRelevancePercent}%` },
+      { label: "Medium Relevance", value: `${mediumRelevancePercent}%` },
+      { label: "Low Relevance", value: `${lowRelevancePercent}%` }
     ],
     recommendations: [
       "Focus ASO efforts on high-relevance terms first",
@@ -252,9 +288,9 @@ export function analyzeKeywordRelevancy(keywords: KeywordData[], appContext?: Ap
       "Develop features to improve relevance for medium-relevance terms"
     ],
     chartData: [
-      { name: "High Relevance", value: 45, fill: "#10B981" },
-      { name: "Medium Relevance", value: 30, fill: "#3B82F6" },
-      { name: "Low Relevance", value: 25, fill: "#F97316" }
+      { name: "High Relevance", value: highRelevancePercent, fill: "#10B981" },
+      { name: "Medium Relevance", value: mediumRelevancePercent, fill: "#3B82F6" },
+      { name: "Low Relevance", value: lowRelevancePercent, fill: "#F97316" }
     ]
   };
 }
