@@ -263,7 +263,7 @@ export const InsightModules: React.FC<InsightModuleProps> = ({
                 key={insight.id}
                 className={`rounded-lg border p-4 cursor-pointer transition-all 
                   ${isSelected 
-                    ? `border-${insight.textColor} ring-1 ring-${insight.textColor} scale-[1.02]` 
+                    ? `border-${insight.borderColor} ring-1 ring-${insight.textColor} scale-[1.02]` 
                     : insight.borderColor} 
                   bg-gradient-to-br ${insight.color}
                   ${isAnalyzing && !isSelected ? 'opacity-50' : 'hover:scale-[1.01]'}`}

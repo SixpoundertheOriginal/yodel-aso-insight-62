@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/layouts";
 import { ChatInterface } from "@/components/GrowthGapFinder/ChatInterface";
@@ -63,6 +64,36 @@ const GrowthGapFinderPage = () => {
       }
     }
   }, [keywordData]);
+
+  // Function to handle workflow step navigation
+  const navigateToStep = (step: string) => {
+    // Only allow navigating to a step if prerequisites are met
+    if (step === "upload" && !selectedApp) {
+      toast({
+        title: "Select an app first",
+        description: "Please select an app before proceeding to keyword upload.",
+      });
+      return;
+    }
+    
+    if (step === "insights" && (!keywordData || parsedKeywords.length === 0)) {
+      toast({
+        title: "Upload keywords first",
+        description: "Please upload keyword data before proceeding to insights.",
+      });
+      return;
+    }
+    
+    if (step === "results" && !results) {
+      toast({
+        title: "Analyze insights first",
+        description: "Please select and analyze an insight before viewing results.",
+      });
+      return;
+    }
+    
+    setActiveTab(step);
+  };
   
   const handleFileUpload = (files: File[]) => {
     console.log("Files uploaded:", files);
@@ -81,9 +112,9 @@ const GrowthGapFinderPage = () => {
               description: `${files.length} file(s) uploaded successfully. You can now analyze your keyword data.`,
             });
             
-            // If an app is selected, move to insights tab
+            // If an app is selected, move to insights tab instead of results
             if (selectedApp) {
-              setActiveTab("insights");
+              navigateToStep("insights");
             }
           }
         };
@@ -101,7 +132,7 @@ const GrowthGapFinderPage = () => {
   const handleSelectApp = (app: AppDetails) => {
     setSelectedApp(app);
     // Move to the upload tab if an app is selected
-    setActiveTab("upload");
+    navigateToStep("upload");
     toast({
       title: "App Selected",
       description: `"${app.trackName}" selected for analysis. Please upload keyword data next.`,
@@ -207,7 +238,7 @@ const GrowthGapFinderPage = () => {
         });
         
         // Switch to results tab after analysis is complete
-        setActiveTab("results");
+        navigateToStep("results");
       } catch (error) {
         console.error('Error analyzing data:', error);
         // Fall back to simulated analysis
@@ -468,32 +499,44 @@ const GrowthGapFinderPage = () => {
         <div className="flex flex-col space-y-4">
           <TopBar title="Growth Gap Finder" />
           
-          {/* Main workflow steps indicator */}
+          {/* Main workflow steps indicator - now interactive */}
           <div className="flex items-center justify-center bg-zinc-900/70 rounded-lg p-3 border border-zinc-700">
-            <div className={`flex items-center px-3 py-1 ${activeTab === "app-search" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+            <div 
+              className={`flex items-center px-3 py-1 ${activeTab === "app-search" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1 cursor-pointer hover:bg-zinc-800 transition-colors`}
+              onClick={() => navigateToStep("app-search")}
+            >
               <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">1.</span>
               <span>App Search</span>
             </div>
             <div className="text-zinc-500 mx-2">→</div>
-            <div className={`flex items-center px-3 py-1 ${activeTab === "upload" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+            <div 
+              className={`flex items-center px-3 py-1 ${activeTab === "upload" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1 cursor-pointer hover:bg-zinc-800 transition-colors`}
+              onClick={() => navigateToStep("upload")}
+            >
               <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">2.</span>
               <span>Keyword Upload</span>
             </div>
             <div className="text-zinc-500 mx-2">→</div>
-            <div className={`flex items-center px-3 py-1 ${activeTab === "insights" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+            <div 
+              className={`flex items-center px-3 py-1 ${activeTab === "insights" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1 cursor-pointer hover:bg-zinc-800 transition-colors`}
+              onClick={() => navigateToStep("insights")}
+            >
               <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">3.</span>
               <span>Insights</span>
             </div>
             <div className="text-zinc-500 mx-2">→</div>
-            <div className={`flex items-center px-3 py-1 ${activeTab === "results" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1`}>
+            <div 
+              className={`flex items-center px-3 py-1 ${activeTab === "results" ? 'bg-zinc-700 text-white' : 'text-zinc-400'} rounded mx-1 cursor-pointer hover:bg-zinc-800 transition-colors`}
+              onClick={() => navigateToStep("results")}
+            >
               <span className="font-medium mr-2 bg-zinc-800 text-zinc-100 px-2 py-0.5 rounded-full text-xs">4.</span>
               <span>Results</span>
             </div>
           </div>
           
-          {/* Main Tabs for the workflow */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-zinc-800 border border-zinc-700 hidden">
+          {/* Main Tabs for the workflow - now visible and usable */}
+          <Tabs value={activeTab} onValueChange={navigateToStep} className="space-y-4">
+            <TabsList className="bg-zinc-800 border border-zinc-700">
               <TabsTrigger value="app-search" className="data-[state=active]:bg-zinc-700">
                 1. App Search
               </TabsTrigger>
