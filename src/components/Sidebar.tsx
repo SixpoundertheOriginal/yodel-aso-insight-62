@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BarChart, TrendingUp, ArrowDown, LayoutDashboard } from "lucide-react";
+import { BarChart, TrendingUp, ArrowDown, LayoutDashboard, Lightbulb } from "lucide-react";
 
 const Sidebar: React.FC = React.memo(() => {
   const location = useLocation();
@@ -42,6 +42,12 @@ const Sidebar: React.FC = React.memo(() => {
             icon={<ArrowDown className="w-5 h-5" />} 
             label="Conversion Analysis" 
             isActive={location.pathname === '/conversion-analysis'}
+          />
+          <SidebarItem 
+            href="/growth-gap-finder" 
+            icon={<Lightbulb className="w-5 h-5" />} 
+            label="Growth Gap Finder" 
+            isActive={location.pathname === '/growth-gap-finder'}
           />
         </nav>
       </div>
