@@ -84,9 +84,9 @@ const GrowthGapFinderPage = () => {
       return;
     }
     
-    if (step === "results" && !results) {
+    if (step === "results" && !selectedInsight) {
       toast({
-        title: "Analyze insights first",
+        title: "Select an insight first",
         description: "Please select and analyze an insight before viewing results.",
       });
       return;
@@ -107,15 +107,18 @@ const GrowthGapFinderPage = () => {
         reader.onload = (e) => {
           if (e.target?.result) {
             setKeywordData(e.target.result as string);
+            
+            // Reset results when new files are uploaded
+            setResults(null);
+            setSelectedInsight(null);
+            
             toast({
               title: "Data Ready",
               description: `${files.length} file(s) uploaded successfully. You can now analyze your keyword data.`,
             });
             
-            // If an app is selected, move to insights tab instead of results
-            if (selectedApp) {
-              navigateToStep("insights");
-            }
+            // Always navigate to insights tab after successful file upload
+            setActiveTab("insights");
           }
         };
         reader.readAsText(file);
