@@ -31,19 +31,136 @@ const GrowthGapFinderPage = () => {
     setSelectedInsight(insightType);
     setIsAnalyzing(true);
     
-    // Simulate results for demo purposes
+    // Simulated analysis duration
+    const analysisDuration = 2000 + Math.random() * 1500; // Between 2-3.5 seconds
+    
+    // Simulate results for each insight type
     setTimeout(() => {
+      let resultData;
+      
+      switch(insightType) {
+        case "MissedImpressions":
+          resultData = {
+            title: "Missed Impressions Analysis",
+            summary: "We identified potential missed impressions based on your current keyword rankings.",
+            metrics: [
+              { label: "Estimated Missed Impressions", value: "~140,000" },
+              { label: "Potential Visibility Uplift", value: "+22%" },
+              { label: "Optimization Priority", value: "High" }
+            ],
+            recommendations: [
+              "Target 'fitness tracker' keywords that rank on page 2",
+              "Optimize for 'activity monitor' terms showing growth",
+              "Add 'health analytics' to your app metadata"
+            ]
+          };
+          break;
+          
+        case "BrandVsGeneric":
+          resultData = {
+            title: "Brand vs Generic Keyword Analysis",
+            summary: "Analysis of your performance across branded and generic search terms.",
+            metrics: [
+              { label: "Brand Term Share", value: "34%" },
+              { label: "Generic Term Share", value: "66%" },
+              { label: "Brand CVR Premium", value: "+215%" }
+            ],
+            recommendations: [
+              "Increase generic keyword coverage in app title",
+              "Add competitor brand modifiers to ASA campaigns",
+              "Build more backlinks using generic anchor text"
+            ]
+          };
+          break;
+          
+        case "CompetitorComparison":
+          resultData = {
+            title: "Competitor Comparison",
+            summary: "Analysis of your app compared to top 3 competitors in your category.",
+            metrics: [
+              { label: "Keyword Overlap", value: "42%" },
+              { label: "Ranking Advantage", value: "18%" },
+              { label: "Category Position", value: "#4" }
+            ],
+            recommendations: [
+              "Target keywords where competitors rank but you don't",
+              "Improve keyword density for terms where you're close to top 3",
+              "Analyze top competitor creative assets for insights"
+            ]
+          };
+          break;
+          
+        case "MetadataSuggestions":
+          resultData = {
+            title: "Metadata Optimization Suggestions",
+            summary: "Recommendations for optimizing your app store metadata.",
+            metrics: [
+              { label: "Title Optimization Score", value: "68%" },
+              { label: "Description Relevance", value: "Medium" },
+              { label: "Keyword Coverage", value: "72%" }
+            ],
+            recommendations: [
+              "Update app title to include 'fitness tracker'",
+              "Add more benefit-oriented language in first description paragraph",
+              "Include more category-specific keywords in subtitle"
+            ]
+          };
+          break;
+          
+        case "GrowthOpportunity":
+          resultData = {
+            title: "Growth Opportunity Analysis",
+            summary: "Identification of key growth areas based on market trends and your app's performance.",
+            metrics: [
+              { label: "Growth Potential", value: "High" },
+              { label: "Market Share Gap", value: "18%" },
+              { label: "Trending Keywords", value: "12" }
+            ],
+            recommendations: [
+              "Focus on emerging 'wellness analytics' search trend",
+              "Target growing international markets (Spain, Brazil)",
+              "Capitalize on seasonality with themed promotions"
+            ]
+          };
+          break;
+          
+        case "QuickWins":
+          resultData = {
+            title: "Quick Wins Analysis",
+            summary: "Low-effort, high-impact opportunities for immediate results.",
+            metrics: [
+              { label: "Easy Improvements", value: "8" },
+              { label: "Estimated Impact", value: "~15%" },
+              { label: "Implementation Time", value: "1-2 weeks" }
+            ],
+            recommendations: [
+              "Update screenshots to highlight key features",
+              "Add missing keywords to subtitle",
+              "Respond to recent negative reviews"
+            ]
+          };
+          break;
+          
+        default:
+          resultData = {
+            title: "ASO Analysis",
+            summary: "General analysis of your app store optimization status.",
+            metrics: [
+              { label: "Overall ASO Score", value: "74%" },
+              { label: "Improvement Areas", value: "6" },
+              { label: "Estimated Impact", value: "+25%" }
+            ],
+            recommendations: [
+              "Optimize app metadata for better keyword coverage",
+              "Improve visual assets to increase conversion rate",
+              "Focus on growing categories to expand reach"
+            ]
+          };
+      }
+      
       setResults({
         type: insightType,
-        data: {
-          title: `${insightType} Analysis Results`,
-          summary: "Here are the key insights we've found based on your data.",
-          metrics: [
-            { label: "Missed Impressions", value: "~140,000" },
-            { label: "Potential Uplift", value: "+22%" },
-            { label: "Priority Keywords", value: "15" }
-          ]
-        }
+        data: resultData
       });
       setIsAnalyzing(false);
       
@@ -51,7 +168,7 @@ const GrowthGapFinderPage = () => {
         title: "Analysis Complete",
         description: `${formatInsightName(insightType)} analysis completed successfully.`,
       });
-    }, 2500);
+    }, analysisDuration);
   };
   
   // Helper function to format insight type names for display

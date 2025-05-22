@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, uploadedFiles } = await req.json();
+    const { messages, uploadedFiles, insightType } = await req.json();
     
     // Validate the API key
     if (!openAIApiKey || openAIApiKey.trim() === '') {
@@ -24,7 +24,7 @@ serve(async (req) => {
     }
     
     // Create a system prompt focused on ASO and growth gap finding
-    const systemPrompt = {
+    let systemPrompt = {
       role: 'system',
       content: `You are an ASO (App Store Optimization) expert assistant called YodelAI, specialized in finding growth gaps and optimization opportunities for mobile apps. 
       
@@ -40,10 +40,88 @@ serve(async (req) => {
       Always maintain a helpful, professional tone while providing strategic app store optimization advice.`
     };
     
+    // If there's a specific insight type requested, customize the system prompt
+    if (insightType) {
+      let insightPromptAddition = "";
+      
+      switch(insightType) {
+        case "MissedImpressions":
+          insightPromptAddition = `
+          You're now focusing specifically on missed impression opportunities. Analyze:
+          - Keywords where the app ranks on page 2-5 that could be moved to page 1
+          - High-volume keywords with sub-optimal rankings
+          - Visibility gaps compared to competitors
+          - Specific recommendations for improving rankings on high-potential keywords
+          
+          Provide estimates of potential impression gains where possible.`;
+          break;
+          
+        case "BrandVsGeneric":
+          insightPromptAddition = `
+          You're now focusing specifically on the balance between branded and generic keywords. Analyze:
+          - Current performance across branded vs. generic terms
+          - Conversion rate differences between branded/generic traffic
+          - Opportunities to expand generic keyword coverage
+          - Strategic approach to branded keyword defense
+          
+          Provide specific recommendations for optimizing both branded and generic keyword strategies.`;
+          break;
+          
+        case "CompetitorComparison":
+          insightPromptAddition = `
+          You're now focusing specifically on competitive analysis. Analyze:
+          - Keyword overlap with top 3 competitors
+          - Ranking advantages and disadvantages vs. competitors
+          - Metadata and visual asset differences
+          - Opportunities to target competitor weaknesses
+          
+          Provide specific recommendations for gaining competitive advantage in the app stores.`;
+          break;
+          
+        case "MetadataSuggestions":
+          insightPromptAddition = `
+          You're now focusing specifically on metadata optimization. Analyze:
+          - Current title, subtitle, and description effectiveness
+          - Keyword density and placement optimization
+          - Visual asset improvement opportunities
+          - Category and in-app purchase keyword optimization
+          
+          Provide specific recommendations for metadata changes that could improve visibility and conversion.`;
+          break;
+          
+        case "GrowthOpportunity":
+          insightPromptAddition = `
+          You're now focusing specifically on growth opportunities. Analyze:
+          - Emerging search trends relevant to the app
+          - Untapped geographic markets or languages
+          - Seasonal opportunities for promotion
+          - Category expansion possibilities
+          
+          Provide specific recommendations for capitalizing on growth opportunities in the near term.`;
+          break;
+          
+        case "QuickWins":
+          insightPromptAddition = `
+          You're now focusing specifically on quick, high-impact optimizations. Analyze:
+          - Low-effort metadata changes with high potential impact
+          - Simple visual asset updates to improve conversion
+          - Review response strategies for immediate reputation improvement
+          - Keyword adjustments that could yield fast ranking improvements
+          
+          Provide specific, actionable recommendations that can be implemented within 1-2 weeks.`;
+          break;
+      }
+      
+      // Add the insight-specific guidance to the system prompt
+      if (insightPromptAddition) {
+        systemPrompt.content += "\n\n" + insightPromptAddition;
+      }
+    }
+    
     // Add context about uploaded files if any
     let fileContext = "";
     if (uploadedFiles && uploadedFiles.length > 0) {
-      fileContext = `\n\nNote: The user has uploaded ${uploadedFiles.length} file(s): ${uploadedFiles.map(file => file.name).join(", ")}. Refer to these files when providing insights.`;
+      fileContext = `\n\nThe user has uploaded ${uploadedFiles.length} file(s): ${uploadedFiles.map(file => file.name).join(", ")}. Refer to these files when providing insights.`;
       
       // Add fileContext to the latest user message if it exists
       if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
@@ -87,10 +165,41 @@ serve(async (req) => {
 
       const data = await response.json();
       const assistantMessage = data.choices[0].message.content;
+      
+      // If this was an insight-specific analysis, recommend related insights
+      let recommendedInsight = null;
+      if (insightType) {
+        // Recommend a related insight based on the current one
+        switch(insightType) {
+          case "MissedImpressions":
+            recommendedInsight = "MetadataSuggestions";
+            break;
+          case "BrandVsGeneric":
+            recommendedInsight = "CompetitorComparison";
+            break;
+          case "CompetitorComparison":
+            recommendedInsight = "GrowthOpportunity";
+            break;
+          case "MetadataSuggestions":
+            recommendedInsight = "QuickWins";
+            break;
+          case "GrowthOpportunity":
+            recommendedInsight = "MissedImpressions";
+            break;
+          case "QuickWins":
+            recommendedInsight = "BrandVsGeneric";
+            break;
+          default:
+            recommendedInsight = detectInsightRecommendation(assistantMessage);
+        }
+      } else {
+        // For regular chat, detect insight from message
+        recommendedInsight = detectInsightRecommendation(assistantMessage);
+      }
 
       return new Response(JSON.stringify({ 
         message: assistantMessage,
-        insight: detectInsightRecommendation(assistantMessage)
+        insight: recommendedInsight
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
