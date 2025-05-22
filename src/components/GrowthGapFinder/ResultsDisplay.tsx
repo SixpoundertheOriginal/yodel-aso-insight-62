@@ -3,21 +3,39 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download, FileDown, Share2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { 
+  BarChart, 
+  ResponsiveContainer, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  Cell, 
+  PieChart, 
+  Pie, 
+  Legend 
+} from "recharts";
 
-interface ResultsDisplayProps {
-  results: any | null;
-  isLoading?: boolean;
+interface Metric {
+  label: string;
+  value: string;
 }
 
-// Sample data for visualization
-const chartData = [
-  { name: "App Store Search", value: 24000 },
-  { name: "Browse", value: 13800 },
-  { name: "Web Referral", value: 9000 },
-  { name: "App Referral", value: 6100 },
-  { name: "Unknown", value: 4200 }
-];
+interface ResultData {
+  title: string;
+  summary: string;
+  metrics: Metric[];
+  recommendations: string[];
+  chartData?: any[];
+}
+
+interface ResultsDisplayProps {
+  results: {
+    type: string;
+    data: ResultData;
+  } | null;
+  isLoading?: boolean;
+}
 
 export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoading = false }) => {
   // Loading state
@@ -66,8 +84,81 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
     );
   }
 
-  // Custom colors for the chart
-  const COLORS = ['#F97316', '#3B82F6', '#10B981', '#8B5CF6', '#6B7280'];
+  // Determine chart type based on result type
+  const renderChart = () => {
+    if (!results.data.chartData || results.data.chartData.length === 0) {
+      return null;
+    }
+
+    // For pie chart insight types (brand vs generic, competitor comparison)
+    if (results.type === 'BrandVsGeneric' || 
+        (results.data.chartData.length <= 4 && results.data.chartData.every(item => item.hasOwnProperty('name') && item.hasOwnProperty('value')))) {
+      return (
+        <PieChart width={500} height={250}>
+          <Pie
+            data={results.data.chartData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            innerRadius={30}
+            fill="#8884d8"
+            dataKey="value"
+            nameKey="name"
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          >
+            {results.data.chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill || `#${Math.floor(Math.random()*16777215).toString(16)}`} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value) => value.toLocaleString()} />
+          <Legend layout="vertical" align="right" verticalAlign="middle" />
+        </PieChart>
+      );
+    }
+
+    // Default to bar chart
+    return (
+      <BarChart
+        width={500}
+        height={250}
+        data={results.data.chartData}
+        margin={{
+          top: 5,
+          right: 30,
+          left: 20,
+          bottom: 5,
+        }}
+      >
+        <XAxis 
+          dataKey="name" 
+          tick={{ fill: '#9CA3AF', fontSize: 12 }}
+          axisLine={{ stroke: '#4B5563' }}
+          tickLine={{ stroke: '#4B5563' }}
+        />
+        <YAxis 
+          tick={{ fill: '#9CA3AF', fontSize: 12 }}
+          axisLine={{ stroke: '#4B5563' }}
+          tickLine={{ stroke: '#4B5563' }}
+          tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: '#1F2937', 
+            border: '1px solid #374151',
+            borderRadius: '0.375rem',
+            color: '#E5E7EB'
+          }}
+          formatter={(value: any) => [value.toLocaleString(), 'Value']}
+        />
+        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+          {results.data.chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill || '#F97316'} />
+          ))}
+        </Bar>
+      </BarChart>
+    );
+  };
 
   return (
     <Card className="border-none shadow-none bg-transparent h-full overflow-auto">
@@ -101,7 +192,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
         </div>
         
         <div className="grid grid-cols-3 gap-4">
-          {results.data.metrics.map((metric: any, index: number) => (
+          {results.data.metrics.map((metric: Metric, index: number) => (
             <div 
               key={index} 
               className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4 text-center"
@@ -113,47 +204,10 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
         </div>
         
         <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
-          <h3 className="text-md font-medium text-white mb-4">Missed Visibility by Source</h3>
-          <div className="h-64">
+          <h3 className="text-md font-medium text-white mb-4">Analysis Visualization</h3>
+          <div className="h-64 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                width={500}
-                height={300}
-                data={chartData}
-                margin={{
-                  top: 5,
-                  right: 10,
-                  left: 0,
-                  bottom: 5,
-                }}
-              >
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                  axisLine={{ stroke: '#4B5563' }}
-                  tickLine={{ stroke: '#4B5563' }}
-                />
-                <YAxis 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                  axisLine={{ stroke: '#4B5563' }}
-                  tickLine={{ stroke: '#4B5563' }}
-                  tickFormatter={(value) => value.toLocaleString()}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '0.375rem',
-                    color: '#E5E7EB'
-                  }}
-                  formatter={(value: any) => [value.toLocaleString(), 'Missed Impressions']}
-                />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
+              {renderChart()}
             </ResponsiveContainer>
           </div>
         </div>
@@ -161,18 +215,12 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoadi
         <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
           <h3 className="text-md font-medium text-white mb-3">Recommendations</h3>
           <ul className="space-y-2 text-sm">
-            <li className="flex items-start">
-              <div className="text-yodel-orange mr-2">•</div>
-              <span className="text-zinc-300">Focus on improving keyword rankings for "app store optimization" and "mobile user acquisition"</span>
-            </li>
-            <li className="flex items-start">
-              <div className="text-yodel-orange mr-2">•</div>
-              <span className="text-zinc-300">Add more branded keywords to your metadata to capture existing brand searches</span>
-            </li>
-            <li className="flex items-start">
-              <div className="text-yodel-orange mr-2">•</div>
-              <span className="text-zinc-300">Update screenshots to better highlight key features that match search intent</span>
-            </li>
+            {results.data.recommendations.map((recommendation: string, index: number) => (
+              <li key={index} className="flex items-start">
+                <div className="text-yodel-orange mr-2">•</div>
+                <span className="text-zinc-300">{recommendation}</span>
+              </li>
+            ))}
           </ul>
         </div>
       </CardContent>

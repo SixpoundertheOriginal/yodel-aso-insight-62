@@ -7,30 +7,138 @@ import { InsightModules } from "@/components/GrowthGapFinder/InsightModules";
 import { ResultsDisplay } from "@/components/GrowthGapFinder/ResultsDisplay";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+// Import our keyword analysis utilities
+import { 
+  parseKeywordData, 
+  analyzeBrandVsGeneric,
+  analyzeCompetitorComparison,
+  analyzeMetadataSuggestions,
+  analyzeGrowthOpportunity,
+  analyzeQuickWins,
+  analyzeMissedImpressions
+} from "@/utils/keywordAnalysis";
 
 const GrowthGapFinderPage = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [selectedInsight, setSelectedInsight] = useState<string | null>(null);
   const [results, setResults] = useState<any | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [keywordData, setKeywordData] = useState<string | null>(null);
   
   const handleFileUpload = (files: File[]) => {
     console.log("Files uploaded:", files);
     setUploadedFiles(files);
     
-    if (files.length > 0 && !uploadedFiles.length) {
-      toast({
-        title: "Files uploaded",
-        description: `${files.length} file(s) uploaded successfully. You can now ask the assistant about your data.`,
-      });
+    if (files.length > 0) {
+      // Read and process the first file
+      const file = files[0];
+      if (file.type === 'text/csv' || file.type === 'text/tab-separated-values' || file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setKeywordData(e.target.result as string);
+            toast({
+              title: "Data Ready",
+              description: `${files.length} file(s) uploaded successfully. You can now analyze your keyword data.`,
+            });
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        toast({
+          title: "Invalid File",
+          description: "Please upload a CSV or TSV file with keyword data.",
+          variant: "destructive",
+        });
+      }
     }
   };
   
-  const handleInsightSelect = (insightType: string) => {
+  const handleInsightSelect = async (insightType: string) => {
     console.log("Insight selected:", insightType);
     setSelectedInsight(insightType);
     setIsAnalyzing(true);
     
+    // If we have real keyword data, use it for analysis
+    if (keywordData) {
+      try {
+        const parsedKeywords = parseKeywordData(keywordData);
+        console.log(`Parsed ${parsedKeywords.length} keywords for analysis`);
+        
+        let resultData;
+        
+        // Try to do local analysis first
+        if (parsedKeywords.length > 0) {
+          switch(insightType) {
+            case "BrandVsGeneric":
+              resultData = analyzeBrandVsGeneric(parsedKeywords);
+              break;
+              
+            case "CompetitorComparison":
+              resultData = analyzeCompetitorComparison(parsedKeywords);
+              break;
+              
+            case "MetadataSuggestions":
+              resultData = analyzeMetadataSuggestions(parsedKeywords);
+              break;
+              
+            case "GrowthOpportunity":
+              resultData = analyzeGrowthOpportunity(parsedKeywords);
+              break;
+              
+            case "QuickWins":
+              resultData = analyzeQuickWins(parsedKeywords);
+              break;
+              
+            case "MissedImpressions":
+              resultData = analyzeMissedImpressions(parsedKeywords);
+              break;
+          }
+        }
+        
+        // If local analysis isn't available or fails, try the edge function
+        if (!resultData) {
+          const { data, error } = await supabase.functions.invoke('aso-chat', {
+            body: {
+              insightType,
+              keywordData,
+              messages: []
+            }
+          });
+          
+          if (error) throw error;
+          
+          if (data.insightResults) {
+            resultData = data.insightResults;
+          } else {
+            throw new Error('No analysis results returned');
+          }
+        }
+        
+        setResults({
+          type: insightType,
+          data: resultData
+        });
+        
+        toast({
+          title: "Analysis Complete",
+          description: `${formatInsightName(insightType)} analysis completed successfully.`,
+        });
+      } catch (error) {
+        console.error('Error analyzing data:', error);
+        // Fall back to simulated analysis
+        simulateAnalysis(insightType);
+      }
+    } else {
+      // Fall back to simulated analysis
+      simulateAnalysis(insightType);
+    }
+  };
+  
+  // Simulated analysis as fallback
+  const simulateAnalysis = (insightType: string) => {
     // Simulated analysis duration
     const analysisDuration = 2000 + Math.random() * 1500; // Between 2-3.5 seconds
     
@@ -52,6 +160,10 @@ const GrowthGapFinderPage = () => {
               "Target 'fitness tracker' keywords that rank on page 2",
               "Optimize for 'activity monitor' terms showing growth",
               "Add 'health analytics' to your app metadata"
+            ],
+            chartData: [
+              { name: "Missing High Volume", value: 82000, fill: "#F97316" },
+              { name: "Poor Rankings", value: 58000, fill: "#3B82F6" }
             ]
           };
           break;
@@ -69,6 +181,10 @@ const GrowthGapFinderPage = () => {
               "Increase generic keyword coverage in app title",
               "Add competitor brand modifiers to ASA campaigns",
               "Build more backlinks using generic anchor text"
+            ],
+            chartData: [
+              { name: "Branded", value: 34, fill: "#F97316" },
+              { name: "Generic", value: 66, fill: "#3B82F6" }
             ]
           };
           break;
@@ -86,6 +202,12 @@ const GrowthGapFinderPage = () => {
               "Target keywords where competitors rank but you don't",
               "Improve keyword density for terms where you're close to top 3",
               "Analyze top competitor creative assets for insights"
+            ],
+            chartData: [
+              { name: "Top 10", value: 24, fill: "#10B981" },
+              { name: "11-50", value: 38, fill: "#3B82F6" },
+              { name: "51+", value: 15, fill: "#F97316" },
+              { name: "Not Ranking", value: 83, fill: "#6B7280" }
             ]
           };
           break;
@@ -103,6 +225,11 @@ const GrowthGapFinderPage = () => {
               "Update app title to include 'fitness tracker'",
               "Add more benefit-oriented language in first description paragraph",
               "Include more category-specific keywords in subtitle"
+            ],
+            chartData: [
+              { name: "High Volume", value: 28, fill: "#F97316" },
+              { name: "Medium Volume", value: 45, fill: "#3B82F6" },
+              { name: "Low Volume", value: 37, fill: "#10B981" }
             ]
           };
           break;
@@ -120,6 +247,11 @@ const GrowthGapFinderPage = () => {
               "Focus on emerging 'wellness analytics' search trend",
               "Target growing international markets (Spain, Brazil)",
               "Capitalize on seasonality with themed promotions"
+            ],
+            chartData: [
+              { name: "High Volume Gaps", value: 18, fill: "#F97316" },
+              { name: "Quick Growth", value: 24, fill: "#3B82F6" },
+              { name: "Low Risk", value: 32, fill: "#10B981" }
             ]
           };
           break;
@@ -137,6 +269,11 @@ const GrowthGapFinderPage = () => {
               "Update screenshots to highlight key features",
               "Add missing keywords to subtitle",
               "Respond to recent negative reviews"
+            ],
+            chartData: [
+              { name: "Low Difficulty", value: 12, fill: "#10B981" },
+              { name: "Just Outside Top 10", value: 8, fill: "#3B82F6" },
+              { name: "Other Opportunities", value: 5, fill: "#F97316" }
             ]
           };
           break;
@@ -154,6 +291,10 @@ const GrowthGapFinderPage = () => {
               "Optimize app metadata for better keyword coverage",
               "Improve visual assets to increase conversion rate",
               "Focus on growing categories to expand reach"
+            ],
+            chartData: [
+              { name: "Current", value: 74, fill: "#3B82F6" },
+              { name: "Potential", value: 26, fill: "#F97316" }
             ]
           };
       }

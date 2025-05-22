@@ -34,6 +34,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [apiErrorCount, setApiErrorCount] = useState(0);
+  const [keywordData, setKeywordData] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const examplePrompts = [
@@ -57,6 +58,41 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Effect to process uploaded files
+  useEffect(() => {
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      const file = uploadedFiles[0];
+      if (file.type === 'text/csv' || file.type === 'text/tab-separated-values' || file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setKeywordData(e.target.result as string);
+            toast({
+              title: "Keyword Data Processed",
+              description: `Successfully processed ${file.name}. You can now run insight analyses.`,
+              duration: 5000,
+            });
+            
+            // Add a message about the processed file
+            setMessages(prev => [...prev, {
+              role: "assistant",
+              content: `I've processed your keyword data file (${file.name}). You can now ask me specific questions about it or run one of the insight modules for detailed analysis.`,
+              timestamp: new Date()
+            }]);
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        toast({
+          title: "Invalid File Format",
+          description: "Please upload a CSV or TSV file containing keyword data.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    }
+  }, [uploadedFiles]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,7 +131,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const { data, error } = await supabase.functions.invoke('aso-chat', {
         body: {
           messages: conversationHistory,
-          uploadedFiles: fileInfos
+          uploadedFiles: fileInfos,
+          keywordData: keywordData // Send parsed keyword data
         }
       });
 
@@ -179,7 +216,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const handleExamplePrompt = (prompt: typeof examplePrompts[0]) => {
+  const handleExamplePrompt = async (prompt: typeof examplePrompts[0]) => {
     setMessages((prev) => [
       ...prev,
       {
@@ -220,7 +257,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               name: file.name,
               type: file.type,
               size: file.size
-            }))
+            })),
+            keywordData: keywordData // Send parsed keyword data
           }
         });
 
@@ -347,6 +385,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <h4 className="text-red-400 font-medium">AI Service Unavailable</h4>
                 <p className="text-red-300 text-sm">
                   There seems to be an issue with the AI service. Please try the pre-built insight modules instead.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {uploadedFiles && uploadedFiles.length > 0 && keywordData && (
+          <div className="mt-4 p-3 bg-green-900/20 border border-green-800 rounded-md">
+            <div className="flex items-start">
+              <TrendingUp className="h-5 w-5 text-green-400 mr-2 mt-0.5" />
+              <div>
+                <h4 className="text-green-400 font-medium">Keyword Data Ready</h4>
+                <p className="text-green-300 text-sm">
+                  Your keyword data has been processed. Try running an analysis using the insight modules.
                 </p>
               </div>
             </div>
