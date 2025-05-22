@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/layouts";
 import { ChatInterface } from "@/components/GrowthGapFinder/ChatInterface";
 import { FileUploadSection } from "@/components/GrowthGapFinder/FileUploadSection";
@@ -21,6 +21,9 @@ import {
   analyzeGrowthOpportunity,
   analyzeQuickWins,
   analyzeMissedImpressions,
+  analyzeRankingOpportunities,
+  analyzeKeywordRelevancy,
+  KeywordData,
   AppContext as AppKeywordContext
 } from "@/utils/keywordAnalysis";
 
@@ -31,7 +34,34 @@ const GrowthGapFinderPage = () => {
   const [results, setResults] = useState<any | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [keywordData, setKeywordData] = useState<string | null>(null);
+  const [parsedKeywords, setParsedKeywords] = useState<KeywordData[]>([]);
   const [selectedApp, setSelectedApp] = useState<AppDetails | null>(null);
+  
+  // Parse keyword data whenever it changes
+  useEffect(() => {
+    if (keywordData) {
+      try {
+        const parsed = parseKeywordData(keywordData);
+        setParsedKeywords(parsed);
+        console.log(`Parsed ${parsed.length} keywords for analysis`);
+        
+        // Show a toast notification when keywords are successfully parsed
+        if (parsed.length > 0) {
+          toast({
+            title: "Keywords Ready",
+            description: `${parsed.length} keywords parsed and ready for analysis.`,
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing keyword data:", error);
+        toast({
+          title: "Parsing Error",
+          description: "There was an error processing your keyword data.",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [keywordData]);
   
   const handleFileUpload = (files: File[]) => {
     console.log("Files uploaded:", files);
@@ -83,23 +113,23 @@ const GrowthGapFinderPage = () => {
     setIsAnalyzing(true);
     
     // If we have real keyword data, use it for analysis
-    if (keywordData) {
+    if (parsedKeywords.length > 0) {
       try {
-        const parsedKeywords = parseKeywordData(keywordData);
-        console.log(`Parsed ${parsedKeywords.length} keywords for analysis`);
+        console.log(`Analyzing ${parsedKeywords.length} keywords for ${insightType}`);
+        
+        // Create app context if available
+        const appContext = selectedApp ? {
+          name: selectedApp.trackName,
+          developer: selectedApp.sellerName,
+          category: selectedApp.primaryGenreName || 'Unknown',
+          rating: selectedApp.averageUserRating || 0,
+          ratingCount: selectedApp.userRatingCount || 0,
+        } : undefined;
         
         let resultData;
         
         // Try to do local analysis first, now with app context if available
         if (parsedKeywords.length > 0) {
-          const appContext = selectedApp ? {
-            name: selectedApp.trackName,
-            developer: selectedApp.sellerName,
-            category: selectedApp.primaryGenreName || 'Unknown',
-            rating: selectedApp.averageUserRating || 0,
-            ratingCount: selectedApp.userRatingCount || 0,
-          } : undefined;
-          
           switch(insightType) {
             case "BrandVsGeneric":
               resultData = analyzeBrandVsGeneric(parsedKeywords, appContext);
@@ -123,6 +153,14 @@ const GrowthGapFinderPage = () => {
               
             case "MissedImpressions":
               resultData = analyzeMissedImpressions(parsedKeywords, appContext);
+              break;
+              
+            case "RankingOpportunities":
+              resultData = analyzeRankingOpportunities(parsedKeywords, appContext);
+              break;
+              
+            case "RelevancyAnalysis":
+              resultData = analyzeKeywordRelevancy(parsedKeywords, appContext);
               break;
           }
         }
@@ -322,6 +360,50 @@ const GrowthGapFinderPage = () => {
           };
           break;
           
+        case "RankingOpportunities":
+          resultData = {
+            title: "Ranking Improvement Opportunities",
+            summary: `We identified keywords where ${appName} can improve rankings for significant impact.`,
+            metrics: [
+              { label: "Keywords Just Outside Top 10", value: "24" },
+              { label: "Potential Traffic Increase", value: "+28%" },
+              { label: "Conversion Impact", value: "Medium" }
+            ],
+            recommendations: [
+              `Focus on 'health monitoring' keywords ranked 11-15`,
+              `Improve relevance signals for 'activity tracking' terms`,
+              `Address negative reviews mentioning tracking accuracy`
+            ],
+            chartData: [
+              { name: "Ranks 11-20", value: 24, fill: "#F97316" },
+              { name: "Ranks 21-50", value: 18, fill: "#3B82F6" },
+              { name: "Ranks 51+", value: 12, fill: "#10B981" }
+            ]
+          };
+          break;
+          
+        case "RelevancyAnalysis":
+          resultData = {
+            title: "Keyword Relevancy Analysis",
+            summary: `Analysis of how relevant current keywords are to ${appName} and its features.`,
+            metrics: [
+              { label: "High Relevance", value: "45%" },
+              { label: "Medium Relevance", value: "30%" },
+              { label: "Low Relevance", value: "25%" }
+            ],
+            recommendations: [
+              `Focus ASO efforts on high-relevance terms first`,
+              `Remove low-relevance keywords from metadata`,
+              `Develop features to improve relevance for medium-relevance terms`
+            ],
+            chartData: [
+              { name: "High Relevance", value: 45, fill: "#10B981" },
+              { name: "Medium Relevance", value: 30, fill: "#3B82F6" },
+              { name: "Low Relevance", value: 25, fill: "#F97316" }
+            ]
+          };
+          break;
+          
         default:
           resultData = {
             title: "ASO Analysis",
@@ -373,6 +455,8 @@ const GrowthGapFinderPage = () => {
       case "MetadataSuggestions": return "Metadata Suggestions";
       case "GrowthOpportunity": return "Growth Opportunity";
       case "QuickWins": return "Quick Wins";
+      case "RankingOpportunities": return "Ranking Opportunities";
+      case "RelevancyAnalysis": return "Keyword Relevancy";
       default: return insightType;
     }
   };
@@ -446,6 +530,8 @@ const GrowthGapFinderPage = () => {
                       selectedInsight={selectedInsight}
                       isAnalyzing={isAnalyzing}
                       selectedApp={selectedApp}
+                      keywordData={parsedKeywords}
+                      keywordsCount={parsedKeywords.length}
                     />
                   </Card>
                 </div>
@@ -455,6 +541,8 @@ const GrowthGapFinderPage = () => {
                       results={results} 
                       isLoading={isAnalyzing}
                       selectedApp={selectedApp}
+                      keywordData={parsedKeywords}
+                      keywordsCount={parsedKeywords.length}
                     />
                   </Card>
                 </div>
@@ -470,6 +558,8 @@ const GrowthGapFinderPage = () => {
                     isLoading={isAnalyzing}
                     selectedApp={selectedApp}
                     showFullResults={true}
+                    keywordData={parsedKeywords}
+                    keywordsCount={parsedKeywords.length}
                   />
                 </Card>
               </div>
