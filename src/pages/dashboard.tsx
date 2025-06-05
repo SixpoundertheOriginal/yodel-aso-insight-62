@@ -5,6 +5,7 @@ import { MainLayout } from "../layouts";
 import KpiCard from "../components/KpiCard";
 import TimeSeriesChart from "../components/TimeSeriesChart";
 import ComparisonChart from "../components/ComparisonChart";
+import AiInsightsBox from "../components/AiInsightsBox";
 import { useAsoData } from "../context/AsoDataContext";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { Toggle } from "@/components/ui/toggle";
@@ -100,6 +101,12 @@ const Dashboard: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* AI Insights Box */}
+      <AiInsightsBox 
+        summaryData={data.summary}
+        excludeAsa={excludeAsa}
+      />
 
       {/* Performance Metrics Chart */}
       <Card className="bg-zinc-800 rounded-md mb-8">
