@@ -6,6 +6,8 @@ import KpiCard from "../components/KpiCard";
 import TimeSeriesChart from "../components/TimeSeriesChart";
 import ComparisonChart from "../components/ComparisonChart";
 import AiInsightsBox from "../components/AiInsightsBox";
+import { ChatInterface } from "../components/ChatInterface";
+import { ChatButton } from "../components/ChatButton";
 import { useAsoData } from "../context/AsoDataContext";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { Toggle } from "@/components/ui/toggle";
@@ -15,6 +17,7 @@ import { chartConfig } from "@/utils/chartConfig";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const { data, loading, filters, setFilters } = useAsoData();
 
   // Update traffic sources when excludeAsa toggles
@@ -155,6 +158,17 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+      {/* Chat Interface */}
+      <ChatButton 
+        onClick={() => setIsChatOpen(true)} 
+        isOpen={isChatOpen} 
+      />
+      <ChatInterface 
+        dashboardData={data}
+        isOpen={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+      />
     </MainLayout>
   );
 };
