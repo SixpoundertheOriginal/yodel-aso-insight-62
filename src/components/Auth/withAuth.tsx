@@ -4,13 +4,29 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth, AuthState } from '@/context/AuthContext';
 import { CompletingSetup } from './CompletingSetup'; // New component
 import { RefreshCw } from 'lucide-react'; // For generic loading spinner
+import { useDevMode } from '@/hooks/useDevMode';
+import { Badge } from '@/components/ui/badge';
 
 export const withAuth = <P extends object>(
   Component: React.ComponentType<P>
 ) => {
   const AuthProtected: React.FC<P> = (props) => {
     const { authState, isLoading, authError } = useAuth();
+    const { isAuthBypassed } = useDevMode();
     const navigate = useNavigate();
+
+    if (isAuthBypassed) {
+      return (
+        <>
+          <div className="fixed bottom-4 right-4 z-50 animate-pulse">
+            <Badge variant="secondary" className="bg-yellow-400 text-yellow-900 shadow-lg hover:bg-yellow-300">
+              DEV MODE: AUTH BYPASSED
+            </Badge>
+          </div>
+          <Component {...props} />
+        </>
+      );
+    }
 
     React.useEffect(() => {
       // This effect primarily handles redirection for non-complete states

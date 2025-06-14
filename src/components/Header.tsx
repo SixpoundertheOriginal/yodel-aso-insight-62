@@ -3,9 +3,13 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Menu, User, Shield } from "lucide-react";
+import { Search, Menu, User, Shield, Fingerprint } from "lucide-react";
+import { useDevMode } from "@/hooks/useDevMode";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Header = React.memo(() => {
+  const { canBypass, isBypassEnabled, toggleBypass } = useDevMode();
+
   return (
     <header className="border-b border-zinc-800 bg-gradient-to-r from-yodel-orange/90 to-yodel-orange/80 sticky top-0 z-10 shadow-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -46,6 +50,23 @@ const Header = React.memo(() => {
         </div>
         
         <div className="flex items-center space-x-4">
+          {canBypass && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/20"
+                  onClick={toggleBypass}
+                >
+                  <Fingerprint className={`h-5 w-5 transition-colors ${isBypassEnabled ? 'text-yellow-400' : 'text-white'}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-zinc-800 border-zinc-700 text-white">
+                <p>{isBypassEnabled ? "Auth Bypass ON (Click to disable)" : "Auth Bypass OFF (Click to enable)"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
             <Search className="h-5 w-5" />
           </Button>
