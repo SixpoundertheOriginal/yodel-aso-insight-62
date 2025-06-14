@@ -1,3 +1,4 @@
+
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -10,8 +11,9 @@ import { ChatButton } from "../components/ChatButton";
 import { useAsoData } from "../context/AsoDataContextV2";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { useOrganization } from "../hooks/useOrganization";
-import { useAuth } from "../context/AuthContext"; // Import useAuth
+import { useAuth } from "../context/AuthContext";
 import { Toggle } from "@/components/ui/toggle";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ChartContainer from "@/components/ui/ChartContainer";
 import { chartConfig } from "@/utils/chartConfig";
