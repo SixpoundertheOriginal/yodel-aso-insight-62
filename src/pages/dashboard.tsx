@@ -1,4 +1,3 @@
-
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -29,9 +28,22 @@ const Dashboard: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const { user } = useAuth(); // Get user from useAuth
-  const { organization, profile, loading: orgDetailsLoading } = useOrganization();
-  const { data, loading: asoDataLoading, filters, setFilters } = useAsoData();
   const { isAuthBypassed } = useDevMode();
+  
+  const { 
+    organization: realOrganization, 
+    profile, 
+    loading: orgDetailsLoading 
+  } = useOrganization();
+
+  const { data, loading: asoDataLoading, filters, setFilters } = useAsoData();
+
+  // In dev mode, provide mock organization and adjust loading state
+  const organization = isAuthBypassed 
+    ? { id: 'dev-org-bypassed', name: 'Mock Organization (Dev Mode)' } 
+    : realOrganization;
+
+  const isLoading = isAuthBypassed ? asoDataLoading : (orgDetailsLoading || asoDataLoading);
 
   // The withAuth HOC now ensures this component only renders when authState is AUTHENTICATED_COMPLETE.
   // Thus, user, profile, and a basic organization record are guaranteed to exist.
@@ -58,7 +70,7 @@ const Dashboard: React.FC = () => {
 
   // orgDetailsLoading is for fetching specific org data via useOrganization
   // asoDataLoading is for fetching ASO metrics
-  if (orgDetailsLoading || asoDataLoading || !data || !organization) {
+  if (isLoading || !data || !organization) {
     // Show a generic loading state for the dashboard content
     // This assumes that by the time we are here, basic org/profile exists (guaranteed by withAuth)
     // This loading is for the *content* of the dashboard.
