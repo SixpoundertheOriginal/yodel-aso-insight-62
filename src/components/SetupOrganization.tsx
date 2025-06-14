@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createDemoOrganization } from '@/services/seedData';
@@ -10,6 +11,7 @@ export const SetupOrganization: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleCreateDemo = async () => {
     if (!user) return;
@@ -46,6 +48,10 @@ export const SetupOrganization: React.FC = () => {
     }
   };
 
+  const handleGoHome = () => {
+    navigate('/');
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-zinc-900 p-4">
       <Card className="w-full max-w-md bg-zinc-800 border-zinc-700">
@@ -53,16 +59,24 @@ export const SetupOrganization: React.FC = () => {
           <CardTitle className="text-white">Welcome to ASO Platform</CardTitle>
           <CardDescription className="text-zinc-400">
             You need to be part of an organization to access ASO data. 
-            Create a demo organization to get started.
+            Create a demo organization to get started or go back to the home page.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button 
             onClick={handleCreateDemo} 
             disabled={loading || !user} // Also disable if user is somehow null
             className="w-full"
           >
             {loading ? 'Creating Demo Organization...' : 'Create Demo Organization'}
+          </Button>
+          <Button 
+            onClick={handleGoHome} 
+            variant="outline"
+            className="w-full"
+            disabled={loading}
+          >
+            Go Back to Home
           </Button>
         </CardContent>
       </Card>
