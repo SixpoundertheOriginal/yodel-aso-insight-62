@@ -1,1 +1,6 @@
-project_id = "bkbcqocpjahewqjmlgvf"
+
+# Supabase project id: bkbcqocpjahewqjmlgvf
+# For more information on Supabase functions, see https://supabase.com/docs/guides/functions
+[functions.aso-chat]
+[functions.create-platform-admin]
+[functions.get-environment-config]

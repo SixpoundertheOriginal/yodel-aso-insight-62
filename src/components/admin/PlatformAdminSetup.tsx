@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +11,8 @@ import { Shield, CheckCircle, AlertTriangle, Copy, Eye, EyeOff, Info } from 'luc
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConfigurationValidator } from './ConfigurationValidator';
+import { useEnvironmentConfig } from '@/hooks/useEnvironmentConfig';
+import { logAdminAction } from '@/utils/auditLogger';
 
 const adminSchema = z.object({
   email: z.string()
@@ -37,11 +38,15 @@ export const PlatformAdminSetup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [configurationValid, setConfigurationValid] = useState(false);
   const { toast } = useToast();
+  const { data: envConfig, isLoading: isEnvLoading } = useEnvironmentConfig();
 
-  // Environment gate - only show in development
-  if (!import.meta.env.DEV) {
-    return null;
-  }
+  useEffect(() => {
+    if (envConfig?.features.adminControls) {
+      logAdminAction('view_admin_setup_granted');
+    } else if (envConfig) {
+      logAdminAction('view_admin_setup_denied', { environment: envConfig.environment });
+    }
+  }, [envConfig]);
 
   const form = useForm<AdminFormValues>({
     resolver: zodResolver(adminSchema),
@@ -253,6 +258,36 @@ export const PlatformAdminSetup: React.FC = () => {
       });
     }
   };
+
+  if (isEnvLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="ml-4 text-zinc-400">Verifying access...</p>
+      </div>
+    );
+  }
+
+  if (!envConfig?.features.adminControls) {
+    return (
+      <Card className="max-w-2xl mx-auto p-6 border-red-200 bg-red-50">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <CardTitle className="text-red-800">Access Denied</CardTitle>
+          </div>
+          <CardDescription className="text-red-700">
+            You do not have permission to access this page, or it is disabled in the current environment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 mt-2">
+            Current Environment: <span className="font-semibold">{envConfig?.environment || 'unknown'}</span>
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
