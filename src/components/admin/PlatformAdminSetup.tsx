@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ConfigurationValidator } from './ConfigurationValidator';
 import { useEnvironmentConfig } from '@/hooks/useEnvironmentConfig';
+import { useDevMode } from '@/hooks/useDevMode'; // Import useDevMode
 import { logAdminAction } from '@/utils/auditLogger';
 
 const adminSchema = z.object({
@@ -39,14 +41,15 @@ export const PlatformAdminSetup: React.FC = () => {
   const [configurationValid, setConfigurationValid] = useState(false);
   const { toast } = useToast();
   const { data: envConfig, isLoading: isEnvLoading } = useEnvironmentConfig();
+  const { canBypass } = useDevMode(); // Get dev mode status
 
   useEffect(() => {
-    if (envConfig?.features.adminControls) {
+    if (envConfig?.features.adminControls || canBypass) {
       logAdminAction('view_admin_setup_granted');
     } else if (envConfig) {
       logAdminAction('view_admin_setup_denied', { environment: envConfig.environment });
     }
-  }, [envConfig]);
+  }, [envConfig, canBypass]);
 
   const form = useForm<AdminFormValues>({
     resolver: zodResolver(adminSchema),
@@ -268,7 +271,7 @@ export const PlatformAdminSetup: React.FC = () => {
     );
   }
 
-  if (!envConfig?.features.adminControls) {
+  if (!envConfig?.features.adminControls && !canBypass) {
     return (
       <Card className="max-w-2xl mx-auto p-6 border-red-200 bg-red-50">
         <CardHeader>
@@ -283,6 +286,9 @@ export const PlatformAdminSetup: React.FC = () => {
         <CardContent>
           <p className="text-sm text-gray-500 mt-2">
             Current Environment: <span className="font-semibold">{envConfig?.environment || 'unknown'}</span>
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            This page is restricted. For development, ensure you are on a recognized development URL (e.g., localhost, *.lovable.dev).
           </p>
         </CardContent>
       </Card>
