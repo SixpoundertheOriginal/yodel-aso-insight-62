@@ -2,28 +2,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from './useOrganization';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface DateRange {
   from: Date;
   to: Date;
 }
 
-export interface AsoMetric {
-  id: string;
-  app_id: string;
-  traffic_source_id: string | null;
-  date: string;
-  impressions: number;
-  downloads: number;
-  page_views: number;
-  conversion_rate: number | null;
-}
+// Use database types directly
+type AsoMetricRow = Database['public']['Tables']['aso_metrics']['Row'];
+type AppRow = Database['public']['Tables']['apps']['Row'];
+type TrafficSourceRow = Database['public']['Tables']['traffic_sources']['Row'];
 
-export interface App {
-  id: string;
-  organization_id: string;
-  name: string;
-  bundle_id: string;
+// Create properly typed interfaces
+export interface App extends Omit<AppRow, 'platform'> {
   platform: 'ios' | 'android';
 }
 
@@ -57,6 +49,17 @@ export interface AsoData {
   }>;
 }
 
+// Type guard function for AsoData
+function isValidAsoData(data: unknown): data is AsoData {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as any;
+  return (
+    obj.summary &&
+    Array.isArray(obj.timeseriesData) &&
+    Array.isArray(obj.trafficSources)
+  );
+}
+
 export const useAsoMetrics = (
   dateRange: DateRange,
   trafficSources: string[] = [],
@@ -83,7 +86,14 @@ export const useAsoMetrics = (
           .eq('organization_id', organization.id);
 
         if (appsError) throw appsError;
-        setApps(appsData || []);
+        
+        // Type assertion with validation for apps
+        const typedApps: App[] = (appsData || []).map(app => ({
+          ...app,
+          platform: app.platform as 'ios' | 'android'
+        }));
+        
+        setApps(typedApps);
 
         // Fetch traffic sources
         const { data: sourcesData, error: sourcesError } = await supabase
@@ -127,8 +137,8 @@ export const useAsoMetrics = (
           .gte('expires_at', new Date().toISOString())
           .maybeSingle();
 
-        if (cachedData) {
-          setData(cachedData.data as AsoData);
+        if (cachedData && isValidAsoData(cachedData.data)) {
+          setData(cachedData.data);
           setLoading(false);
           return;
         }
@@ -170,11 +180,14 @@ export const useAsoMetrics = (
         const expiresAt = new Date();
         expiresAt.setMinutes(expiresAt.getMinutes() + 5);
         
+        // Convert AsoData to JSON-compatible format for storage
+        const cacheData = JSON.parse(JSON.stringify(processedData));
+        
         await supabase
           .from('data_cache')
           .upsert({
             cache_key: cacheKey,
-            data: processedData,
+            data: cacheData,
             expires_at: expiresAt.toISOString()
           });
 

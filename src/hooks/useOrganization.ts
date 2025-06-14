@@ -2,24 +2,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
+// Use database types directly
+type Organization = Database['public']['Tables']['organizations']['Row'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
-interface UserProfile {
-  id: string;
-  organization_id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
+// Create a properly typed interface for UserProfile
+interface UserProfile extends Omit<ProfileRow, 'role'> {
   role: 'admin' | 'manager' | 'analyst' | 'viewer';
-  created_at: string;
-  updated_at: string;
 }
 
 export const useOrganization = () => {
@@ -50,7 +41,13 @@ export const useOrganization = () => {
           throw profileError;
         }
 
-        setProfile(profileData);
+        // Type assertion with validation
+        const typedProfile: UserProfile = {
+          ...profileData,
+          role: profileData.role as 'admin' | 'manager' | 'analyst' | 'viewer'
+        };
+
+        setProfile(typedProfile);
 
         // If user has an organization, fetch it
         if (profileData?.organization_id) {
