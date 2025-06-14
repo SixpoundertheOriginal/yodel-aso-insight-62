@@ -1,13 +1,33 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useDevMode } from "@/hooks/useDevMode";
+import { RefreshCw } from "lucide-react";
 
 const Index = () => {
   const { session } = useAuth();
+  const { isAuthBypassed } = useDevMode();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthBypassed) {
+      console.log("[INDEX_PAGE] Auth is bypassed in dev mode. Redirecting to dashboard.");
+      navigate('/dashboard');
+    }
+  }, [isAuthBypassed, navigate]);
+
+  if (isAuthBypassed) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-zinc-900">
+        <RefreshCw className="h-6 w-6 animate-spin text-white mr-3" />
+        <p className="text-white">Dev mode active, redirecting to dashboard...</p>
+      </div>
+    );
+  }
   
   return (
     <MainLayout>
