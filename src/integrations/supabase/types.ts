@@ -174,24 +174,42 @@ export type Database = {
       }
       organizations: {
         Row: {
+          api_limits: Json | null
+          billing_email: string | null
           created_at: string
+          features: Json | null
           id: string
           name: string
+          settings: Json | null
           slug: string
+          subscription_status: string | null
+          subscription_tier: string | null
           updated_at: string
         }
         Insert: {
+          api_limits?: Json | null
+          billing_email?: string | null
           created_at?: string
+          features?: Json | null
           id?: string
           name: string
+          settings?: Json | null
           slug: string
+          subscription_status?: string | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Update: {
+          api_limits?: Json | null
+          billing_email?: string | null
           created_at?: string
+          features?: Json | null
           id?: string
           name?: string
+          settings?: Json | null
           slug?: string
+          subscription_status?: string | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Relationships: []
