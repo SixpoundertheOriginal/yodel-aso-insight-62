@@ -1,8 +1,25 @@
 
 import { useState, useEffect } from 'react';
-import { AsoData, DateRange, TimeSeriesPoint } from './useAsoMetrics';
 
-// These interfaces are not exported from useAsoMetrics.ts so they are defined here.
+// Define and export types here to be used across the app, fixing the export errors.
+export interface DateRange {
+  from: Date;
+  to: Date;
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  impressions: number;
+  downloads: number;
+  pageViews: number;
+}
+
+export interface TrafficSource {
+  name: string;
+  value: number;
+  delta: number;
+}
+
 export interface MetricSummary {
   value: number;
   delta: number; // percentage change
@@ -13,6 +30,12 @@ export interface AsoMetrics {
   downloads: MetricSummary;
   productPageViews: MetricSummary;
   cvr: MetricSummary;
+}
+
+export interface AsoData {
+  summary: AsoMetrics;
+  timeseriesData: TimeSeriesPoint[];
+  trafficSources: TrafficSource[];
 }
 
 export const useMockAsoData = (
@@ -61,13 +84,24 @@ export const useMockAsoData = (
             date: currentDate.toISOString().split('T')[0],
             impressions: Math.floor(Math.random() * 5000) + 500,
             downloads: Math.floor(Math.random() * 1000) + 100,
-            productPageViews: Math.floor(Math.random() * 3000) + 300,
+            pageViews: Math.floor(Math.random() * 3000) + 300, // FIX: renamed productPageViews to pageViews
           });
         }
+
+        // FIX: Add mock traffic sources data
+        const mockTrafficSources: TrafficSource[] = [
+            { name: "App Store Search", value: Math.floor(Math.random() * 50000) + 5000, delta: (Math.random() * 40) - 20 },
+            { name: "App Store Browse", value: Math.floor(Math.random() * 30000) + 3000, delta: (Math.random() * 40) - 20 },
+            { name: "Apple Search Ads", value: Math.floor(Math.random() * 15000) + 1500, delta: (Math.random() * 40) - 20 },
+            { name: "Web Referrer", value: Math.floor(Math.random() * 10000) + 1000, delta: (Math.random() * 40) - 20 },
+            { name: "App Referrer", value: Math.floor(Math.random() * 5000) + 500, delta: (Math.random() * 40) - 20 },
+            { name: "Unknown", value: Math.floor(Math.random() * 1000) + 100, delta: (Math.random() * 40) - 20 },
+        ];
         
         const mockData: AsoData = {
           summary,
           timeseriesData,
+          trafficSources: mockTrafficSources, // FIX: Added trafficSources to the mock data object
         };
         
         // Simulate API delay
@@ -75,7 +109,7 @@ export const useMockAsoData = (
           setData(mockData);
           setLoading(false);
         }, 800);
-      } catch (err) {
+      } catch (err) => {
         setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
@@ -89,5 +123,14 @@ export const useMockAsoData = (
     { id: '2', name: 'Mock App 2 (Android)', platform: 'Android' },
   ];
   
-  return { data, loading, error, apps: mockApps, trafficSources };
+  const mockTrafficSourceNames = [
+    "App Store Search",
+    "App Store Browse", 
+    "Apple Search Ads",
+    "Web Referrer",
+    "App Referrer",
+    "Unknown"
+  ];
+  
+  return { data, loading, error, apps: mockApps, trafficSources: mockTrafficSourceNames };
 };

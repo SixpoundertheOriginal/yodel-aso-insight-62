@@ -41,9 +41,9 @@ export const AsoDataProvider: React.FC<AsoDataProviderProps> = ({ children }) =>
   });
   
   const { data, loading, error } = useMockAsoData(
-    filters.clientList,
     filters.dateRange,
-    filters.trafficSources
+    filters.trafficSources,
+    [] // Pass empty array for appIds, as clientList is not used by the mock hook.
   );
   
   const value = {
