@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -46,6 +47,36 @@ export const PlatformAdminSetup: React.FC = () => {
       email: '',
     },
   });
+
+  const getTroubleshootingSteps = (status?: number): string[] => {
+    switch (status) {
+      case 403:
+        return [
+          'Verify Supabase secrets are configured',
+          'Check ADMIN_CREATION_ENABLED=true',
+          'Ensure ENVIRONMENT=development or staging',
+          'Review Edge Function deployment status'
+        ];
+      case 404:
+        return [
+          'Confirm Edge Function is deployed',
+          'Check function name: create-platform-admin',
+          'Review Supabase project configuration'
+        ];
+      case 500:
+        return [
+          'Check Edge Function logs for errors',
+          'Verify database connectivity',
+          'Review function permissions'
+        ];
+      default:
+        return [
+          'Review console logs for details',
+          'Check Edge Function logs',
+          'Verify network connectivity'
+        ];
+    }
+  };
 
   const handleCreateAdmin = async (data: AdminFormValues) => {
     const startTime = Date.now();
@@ -102,7 +133,7 @@ export const PlatformAdminSetup: React.FC = () => {
             userAgent: navigator.userAgent.substring(0, 100) + '...'
           },
           timestamp: new Date().toISOString(),
-          troubleshooting: this.getTroubleshootingSteps(error.status)
+          troubleshooting: getTroubleshootingSteps(error.status)
         });
 
         // Provide specific error messages and guidance
@@ -200,36 +231,6 @@ export const PlatformAdminSetup: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const getTroubleshootingSteps = (status?: number) => {
-    switch (status) {
-      case 403:
-        return [
-          'Verify Supabase secrets are configured',
-          'Check ADMIN_CREATION_ENABLED=true',
-          'Ensure ENVIRONMENT=development or staging',
-          'Review Edge Function deployment status'
-        ];
-      case 404:
-        return [
-          'Confirm Edge Function is deployed',
-          'Check function name: create-platform-admin',
-          'Review Supabase project configuration'
-        ];
-      case 500:
-        return [
-          'Check Edge Function logs for errors',
-          'Verify database connectivity',
-          'Review function permissions'
-        ];
-      default:
-        return [
-          'Review console logs for details',
-          'Check Edge Function logs',
-          'Verify network connectivity'
-        ];
     }
   };
 
