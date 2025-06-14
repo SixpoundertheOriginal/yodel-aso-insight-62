@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 
 // Define and export types here to be used across the app, fixing the export errors.
@@ -11,6 +12,7 @@ export interface TimeSeriesPoint {
   impressions: number;
   downloads: number;
   pageViews: number;
+  productPageViews: number;
 }
 
 export interface TrafficSource {
@@ -78,12 +80,14 @@ export const useMockAsoData = (
         for (let i = 0; i < 30; i++) {
           const currentDate = new Date(startDate);
           currentDate.setDate(startDate.getDate() + i);
+          const pageViews = Math.floor(Math.random() * 3000) + 300;
           
           timeseriesData.push({
             date: currentDate.toISOString().split('T')[0],
             impressions: Math.floor(Math.random() * 5000) + 500,
             downloads: Math.floor(Math.random() * 1000) + 100,
-            pageViews: Math.floor(Math.random() * 3000) + 300, // FIX: renamed productPageViews to pageViews
+            pageViews: pageViews,
+            productPageViews: pageViews,
           });
         }
 
