@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Menu, User, Shield, Fingerprint } from "lucide-react";
 import { useDevMode } from "@/hooks/useDevMode";
+import { useEnvironmentConfig } from "@/hooks/useEnvironmentConfig";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Header = React.memo(() => {
   const { canBypass, isBypassEnabled, toggleBypass } = useDevMode();
+  const { data: environmentConfig } = useEnvironmentConfig();
 
   return (
     <header className="border-b border-zinc-800 bg-gradient-to-r from-yodel-orange/90 to-yodel-orange/80 sticky top-0 z-10 shadow-md">
@@ -32,7 +34,7 @@ const Header = React.memo(() => {
             <Link to="/reports" className="text-white hover:text-zinc-200 transition-colors">
               Reports
             </Link>
-            {import.meta.env.DEV && (
+            {environmentConfig?.features?.adminControls && (
               <div className="flex items-center space-x-1">
                 <Link 
                   to="/admin/setup" 

@@ -1,12 +1,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useEnvironmentConfig } from './useEnvironmentConfig';
 
 const DEV_AUTH_BYPASS_KEY = 'dev_auth_bypass_enabled';
 
+const isDevelopmentEnvironment = () => {
+    if (typeof window === 'undefined') return false;
+    const { hostname } = window.location;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.lovable.dev') || hostname.endsWith('.lovableproject.com');
+};
+
 /**
  * Hook to manage a development mode authentication bypass.
- * The bypass is only possible in 'development' environments.
+ * The bypass is only possible in 'development' environments, determined by hostname.
  *
  * @returns {object} An object containing:
  * - `isAuthBypassed`: boolean - True if authentication should be bypassed.
@@ -15,9 +20,7 @@ const DEV_AUTH_BYPASS_KEY = 'dev_auth_bypass_enabled';
  * - `toggleBypass`: function - A function to toggle the bypass state.
  */
 export function useDevMode() {
-  const { data: environmentConfig, isLoading } = useEnvironmentConfig();
-  
-  const canBypass = !isLoading && environmentConfig?.environment === 'development';
+  const canBypass = isDevelopmentEnvironment();
 
   const [isBypassEnabled, setIsBypassEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true; // Default to bypassed in dev SSR
