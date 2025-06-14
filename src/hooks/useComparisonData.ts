@@ -1,8 +1,9 @@
+
 // src/hooks/useComparisonData.ts
 import { useMemo } from 'react';
-import { useAsoData } from '../context/AsoDataContext';
+import { useAsoData } from '../context/AsoDataContextV2';
 import { standardizeChartData } from '../utils/format';
-import { AsoData } from './useMockAsoData'; // Import the AsoData type
+import { AsoData } from './useAsoMetrics';
 
 export type ComparisonType = 'period' | 'year';
 

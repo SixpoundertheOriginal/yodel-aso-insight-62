@@ -8,17 +8,38 @@ import ComparisonChart from "../components/ComparisonChart";
 import AiInsightsBox from "../components/AiInsightsBox";
 import { ChatInterface } from "../components/ChatInterface";
 import { ChatButton } from "../components/ChatButton";
-import { useAsoData } from "../context/AsoDataContext";
+import { useAsoData } from "../context/AsoDataContextV2";
 import { useComparisonData } from "../hooks/useComparisonData";
+import { useOrganization } from "../hooks/useOrganization";
 import { Toggle } from "@/components/ui/toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import ChartContainer from "@/components/ui/ChartContainer";
 import { chartConfig } from "@/utils/chartConfig";
+import { SetupOrganization } from "@/components/SetupOrganization";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const { organization, profile, loading: orgLoading } = useOrganization();
   const { data, loading, filters, setFilters } = useAsoData();
+
+  // Show setup screen if user doesn't have an organization
+  if (orgLoading) {
+    return (
+      <MainLayout>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-zinc-800 animate-pulse rounded-md"></div>
+          ))}
+        </div>
+        <div className="h-64 bg-zinc-800 animate-pulse rounded-md"></div>
+      </MainLayout>
+    );
+  }
+
+  if (!organization) {
+    return <SetupOrganization />;
+  }
 
   // Update traffic sources when excludeAsa toggles
   useEffect(() => {
@@ -38,11 +59,6 @@ const Dashboard: React.FC = () => {
 
   const periodComparison = useComparisonData("period");
   const yearComparison = useComparisonData("year");
-  
-  // Console logs for debugging
-  console.log("Period comparison current data:", periodComparison.current?.timeseriesData);
-  console.log("Period comparison previous data:", periodComparison.previous?.timeseriesData);
-  console.log("Sample data point:", periodComparison.current?.timeseriesData?.[0]);
 
   if (loading || !data) {
     return (
@@ -69,6 +85,12 @@ const Dashboard: React.FC = () => {
 
   return (
     <MainLayout>
+      {/* Organization Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
+        <p className="text-zinc-400">Welcome back, {profile?.first_name || 'User'}</p>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <KpiCard
