@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -14,7 +13,7 @@ async function getHasPermission(supabase: SupabaseClient): Promise<boolean> {
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('organization_id', null); // SUPER_ADMIN is a platform-wide role
+      .is('organization_id', null); // FIX: Use .is() for NULL checks, which is safer than .eq().
 
     if (rolesError) {
       console.error('Error fetching user roles:', rolesError);
