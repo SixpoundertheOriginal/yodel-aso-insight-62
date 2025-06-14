@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AsoDataProvider } from "./context/AsoDataContextV2";
 import { AuthProvider } from "./context/AuthContext";
 import Index from "./pages/Index";
@@ -14,6 +14,7 @@ import TrafficSourcesPage from "./pages/traffic-sources";
 import ConversionAnalysisPage from "./pages/conversion-analysis";
 import OverviewPage from "./pages/overview";
 import GrowthGapFinderPage from "./pages/growth-gap-finder";
+import AdminSetup from "./pages/AdminSetup";
 import NotFound from "./pages/NotFound";
 import { withAuth } from "./components/Auth/withAuth";
 
@@ -43,6 +44,10 @@ const App = () => (
               <Route path="/conversion-analysis" element={<ProtectedConversionAnalysisPage />} />
               <Route path="/overview" element={<ProtectedOverviewPage />} />
               <Route path="/growth-gap-finder" element={<ProtectedGrowthGapFinderPage />} />
+              <Route 
+                path="/admin/setup" 
+                element={import.meta.env.DEV ? <AdminSetup /> : <Navigate to="/" replace />} 
+              />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

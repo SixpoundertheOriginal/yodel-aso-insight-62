@@ -2,7 +2,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Search, Menu, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, Menu, User, Shield } from "lucide-react";
 
 const Header = React.memo(() => {
   return (
@@ -27,6 +28,20 @@ const Header = React.memo(() => {
             <Link to="/reports" className="text-white hover:text-zinc-200 transition-colors">
               Reports
             </Link>
+            {import.meta.env.DEV && (
+              <div className="flex items-center space-x-1">
+                <Link 
+                  to="/admin/setup" 
+                  className="text-white hover:text-zinc-200 transition-colors flex items-center space-x-1"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>Admin Setup</span>
+                </Link>
+                <Badge variant="secondary" className="text-xs bg-amber-200 text-amber-800">
+                  Dev Only
+                </Badge>
+              </div>
+            )}
           </nav>
         </div>
         

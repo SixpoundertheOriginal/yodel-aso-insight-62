@@ -1,7 +1,8 @@
 
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BarChart, TrendingUp, ArrowDown, LayoutDashboard, Lightbulb } from "lucide-react";
+import { BarChart, TrendingUp, ArrowDown, LayoutDashboard, Lightbulb, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const Sidebar: React.FC = React.memo(() => {
   const location = useLocation();
@@ -49,6 +50,24 @@ const Sidebar: React.FC = React.memo(() => {
             label="Growth Gap Finder" 
             isActive={location.pathname === '/growth-gap-finder'}
           />
+          {import.meta.env.DEV && (
+            <div className="pt-4 border-t border-zinc-700 mt-4">
+              <div className="flex items-center justify-between mb-2 px-3">
+                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                  Development
+                </span>
+                <Badge variant="outline" className="text-xs border-amber-600 text-amber-400">
+                  Dev Only
+                </Badge>
+              </div>
+              <SidebarItem 
+                href="/admin/setup" 
+                icon={<Shield className="w-5 h-5" />} 
+                label="Admin Setup" 
+                isActive={location.pathname === '/admin/setup'}
+              />
+            </div>
+          )}
         </nav>
       </div>
     </aside>
