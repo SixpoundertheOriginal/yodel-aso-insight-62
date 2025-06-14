@@ -3,44 +3,112 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createDemoOrganization } from '@/services/seedData';
+import { checkUserDataHealth } from '@/services/userManagement';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 
 export const SetupOrganization: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [healthChecking, setHealthChecking] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<{
+    checked: boolean;
+    canProceed: boolean;
+    issues: string[];
+    userRepaired?: boolean;
+  }>({ checked: false, canProceed: false, issues: [] });
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const performHealthCheck = async () => {
+    if (!user) return;
+    
+    setHealthChecking(true);
+    try {
+      const health = await checkUserDataHealth(user.id);
+      setHealthStatus({
+        checked: true,
+        canProceed: health.canCreateOrganization,
+        issues: health.issues
+      });
+      
+      if (health.issues.length > 0) {
+        toast({
+          title: 'Account Issues Detected',
+          description: `Found ${health.issues.length} issue(s). We can attempt to fix them automatically.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Account Status: Good',
+          description: 'Your account is ready for organization creation.',
+        });
+      }
+    } catch (error) {
+      console.error('Health check failed:', error);
+      toast({
+        title: 'Health Check Failed',
+        description: 'Unable to verify account status. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setHealthChecking(false);
+    }
+  };
 
   const handleCreateDemo = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
+      console.log(`[UI] Starting demo organization creation for user ${user.id}`);
+      
       const result = await createDemoOrganization(user.id, user.email || '');
       
       if (result.success) {
+        let message = 'Your demo organization has been set up with sample data.';
+        if (result.userRepaired) {
+          message += ' We also fixed some account issues automatically.';
+        }
+        
         toast({
           title: 'Demo organization created!',
-          description: 'Your demo organization has been set up with sample data.',
+          description: message,
         });
+        
         // Refresh the page to load the new organization
         window.location.reload();
       } else {
-        // Ensure result.error is treated as an Error type or similar
-        const errorToThrow = result.error instanceof Error ? result.error : new Error(String(result.error?.message || 'Unknown error during organization creation'));
-        if (result.error && typeof result.error === 'object' && 'message' in result.error) {
-          // Augment the error with more details if available
-          (errorToThrow as any).details = result.error;
-        }
-        throw errorToThrow;
+        // Handle graceful degradation
+        const errorMessage = result.error?.message || 'Unknown error during organization creation';
+        
+        console.error('Demo organization creation failed:', {
+          error: result.error,
+          userRepaired: result.userRepaired
+        });
+        
+        toast({
+          title: 'Organization Creation Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        
+        // Update health status to show current state
+        setHealthStatus(prev => ({
+          ...prev,
+          canProceed: false,
+          issues: [...prev.issues, errorMessage]
+        }));
       }
     } catch (error: any) {
-      console.error('Detailed error creating demo organization:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error('Unexpected error creating demo organization:', error);
       toast({
-        title: 'Error Creating Organization',
-        description: error.message || 'Failed to create demo organization. Please check console for details.',
+        title: 'Unexpected Error',
+        description: 'An unexpected error occurred. Please try again or contact support.',
         variant: 'destructive',
       });
     } finally {
@@ -63,13 +131,64 @@ export const SetupOrganization: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Health Status Display */}
+          {healthStatus.checked && (
+            <Alert className={healthStatus.canProceed ? "border-green-600 bg-green-900/20" : "border-red-600 bg-red-900/20"}>
+              {healthStatus.canProceed ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              )}
+              <AlertDescription className="text-white">
+                {healthStatus.canProceed ? (
+                  'Account ready for organization creation'
+                ) : (
+                  <>
+                    Account issues detected: {healthStatus.issues.join(', ')}
+                    <br />
+                    <span className="text-sm text-zinc-400 mt-1 block">
+                      Don't worry - we can fix these automatically when you create your organization.
+                    </span>
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Health Check Button */}
           <Button 
-            onClick={handleCreateDemo} 
-            disabled={loading || !user} // Also disable if user is somehow null
+            onClick={performHealthCheck}
+            disabled={healthChecking || loading}
+            variant="outline"
             className="w-full"
           >
-            {loading ? 'Creating Demo Organization...' : 'Create Demo Organization'}
+            {healthChecking ? (
+              <div className="flex items-center">
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Checking Account Status...
+              </div>
+            ) : (
+              'Check Account Status'
+            )}
           </Button>
+
+          {/* Create Demo Organization Button */}
+          <Button 
+            onClick={handleCreateDemo} 
+            disabled={loading || !user}
+            className="w-full"
+          >
+            {loading ? (
+              <div className="flex items-center">
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Creating Demo Organization...
+              </div>
+            ) : (
+              'Create Demo Organization'
+            )}
+          </Button>
+
+          {/* Go Home Button */}
           <Button 
             onClick={handleGoHome} 
             variant="outline"
@@ -83,4 +202,3 @@ export const SetupOrganization: React.FC = () => {
     </div>
   );
 };
-
