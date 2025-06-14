@@ -1,4 +1,3 @@
-
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -20,6 +19,9 @@ import { chartConfig } from "@/utils/chartConfig";
 import { PermissionGate } from "../components/Auth/PermissionGate";
 import { UserRoleManager } from "../components/UserManagement/UserRoleManager";
 import { usePermissions } from "../hooks/usePermissions";
+import { useDevMode } from "../hooks/useDevMode";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
@@ -28,6 +30,7 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth(); // Get user from useAuth
   const { organization, profile, loading: orgDetailsLoading } = useOrganization();
   const { data, loading: asoDataLoading, filters, setFilters } = useAsoData();
+  const { isAuthBypassed } = useDevMode();
 
   // The withAuth HOC now ensures this component only renders when authState is AUTHENTICATED_COMPLETE.
   // Thus, user, profile, and a basic organization record are guaranteed to exist.
@@ -84,6 +87,15 @@ const Dashboard: React.FC = () => {
 
   return (
     <MainLayout>
+      {isAuthBypassed && (
+        <Alert className="mb-6 border-blue-500 text-blue-400 bg-blue-900/20">
+          <Info className="h-4 w-4 !text-blue-400" />
+          <AlertTitle>Developer Mode</AlertTitle>
+          <AlertDescription>
+            You are currently viewing mock data for development and testing purposes.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Organization Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center">

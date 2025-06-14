@@ -1,10 +1,8 @@
+
 import { useState, useEffect } from 'react';
+import { AsoData, DateRange, TimeSeriesPoint } from './useAsoMetrics';
 
-export interface DateRange {
-  from: Date;
-  to: Date;
-}
-
+// These interfaces are not exported from useAsoMetrics.ts so they are defined here.
 export interface MetricSummary {
   value: number;
   delta: number; // percentage change
@@ -17,31 +15,11 @@ export interface AsoMetrics {
   cvr: MetricSummary;
 }
 
-export interface TrafficSource {
-  name: string;
-  value: number;
-  delta: number;
-}
-
-export interface TimeSeriesPoint {
-  date: string;
-  impressions: number;
-  downloads: number;
-  productPageViews: number;
-  pageViews: number;
-}
-
-export interface AsoData {
-  summary: AsoMetrics;
-  timeseriesData: TimeSeriesPoint[];
-  trafficSources: TrafficSource[];
-}
-
 export const useMockAsoData = (
-  clientList: string[],
   dateRange: DateRange,
-  trafficSources: string[]
-): { data: AsoData | null; loading: boolean; error: Error | null } => {
+  trafficSources: string[],
+  appIds: string[]
+): { data: AsoData | null; loading: boolean; error: Error | null; apps: any[]; trafficSources: string[] } => {
   const [data, setData] = useState<AsoData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
@@ -79,27 +57,17 @@ export const useMockAsoData = (
           const currentDate = new Date(startDate);
           currentDate.setDate(startDate.getDate() + i);
           
-          const pageViews = Math.floor(Math.random() * 3000) + 300;
           timeseriesData.push({
             date: currentDate.toISOString().split('T')[0],
             impressions: Math.floor(Math.random() * 5000) + 500,
             downloads: Math.floor(Math.random() * 1000) + 100,
-            productPageViews: pageViews,
-            pageViews: pageViews,
+            productPageViews: Math.floor(Math.random() * 3000) + 300,
           });
         }
-        
-        // Generate traffic source data
-        const trafficSourceData: TrafficSource[] = trafficSources.map((source) => ({
-          name: source,
-          value: Math.floor(Math.random() * 50000) + 5000,
-          delta: parseFloat((Math.random() * 40 - 20).toFixed(1))
-        }));
         
         const mockData: AsoData = {
           summary,
           timeseriesData,
-          trafficSources: trafficSourceData
         };
         
         // Simulate API delay
@@ -114,7 +82,12 @@ export const useMockAsoData = (
     };
     
     generateMockData();
-  }, [clientList, dateRange.from, dateRange.to, trafficSources]);
+  }, [dateRange.from, dateRange.to, trafficSources, appIds]);
   
-  return { data, loading, error };
+  const mockApps = [
+    { id: '1', name: 'Mock App 1 (iOS)', platform: 'iOS' },
+    { id: '2', name: 'Mock App 2 (Android)', platform: 'Android' },
+  ];
+  
+  return { data, loading, error, apps: mockApps, trafficSources };
 };

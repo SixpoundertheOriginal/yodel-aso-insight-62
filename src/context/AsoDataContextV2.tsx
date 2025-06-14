@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useAsoMetrics, DateRange, AsoData } from '../hooks/useAsoMetrics';
+import { useMockAsoData } from '../hooks/useMockAsoData';
+import { useDevMode } from '../hooks/useDevMode';
 
 interface AsoFilters {
   clientList: string[];
@@ -26,6 +28,8 @@ interface AsoDataProviderProps {
 }
 
 export const AsoDataProvider: React.FC<AsoDataProviderProps> = ({ children }) => {
+  const { isAuthBypassed } = useDevMode();
+
   // Default filters
   const [filters, setFilters] = useState<AsoFilters>({
     clientList: [],
@@ -44,7 +48,9 @@ export const AsoDataProvider: React.FC<AsoDataProviderProps> = ({ children }) =>
     appIds: [],
   });
   
-  const { data, loading, error, apps, trafficSources } = useAsoMetrics(
+  const asoDataHook = isAuthBypassed ? useMockAsoData : useAsoMetrics;
+  
+  const { data, loading, error, apps, trafficSources } = asoDataHook(
     filters.dateRange,
     filters.trafficSources,
     filters.appIds
