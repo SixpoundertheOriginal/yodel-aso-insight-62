@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Shield, CheckCircle, AlertTriangle, Copy, Eye, EyeOff, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ConfigurationValidator } from './ConfigurationValidator';
 
 const adminSchema = z.object({
   email: z.string()
@@ -34,6 +35,7 @@ export const PlatformAdminSetup: React.FC = () => {
   const [result, setResult] = useState<AdminCreationResponse | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [configurationValid, setConfigurationValid] = useState(false);
   const { toast } = useToast();
 
   // Environment gate - only show in development
@@ -275,37 +277,12 @@ export const PlatformAdminSetup: React.FC = () => {
             </AlertDescription>
           </Alert>
 
-          {/* Enhanced Environment Configuration Alert */}
-          <Alert className="mb-6 border-blue-200 bg-blue-50">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              <strong>Environment Setup Required:</strong> Configure these Supabase secrets for admin creation:
-              <div className="mt-3 space-y-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <code className="bg-white px-2 py-1 rounded text-xs font-mono">
-                      ADMIN_CREATION_ENABLED
-                    </code>
-                    <p className="text-xs mt-1">Set to: <strong>true</strong></p>
-                  </div>
-                  <div>
-                    <code className="bg-white px-2 py-1 rounded text-xs font-mono">
-                      ENVIRONMENT
-                    </code>
-                    <p className="text-xs mt-1">Set to: <strong>development</strong></p>
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <code className="bg-white px-2 py-1 rounded text-xs font-mono">
-                    DEFAULT_ADMIN_EMAIL
-                  </code>
-                  <span className="text-xs ml-2">(optional fallback email)</span>
-                </div>
-              </div>
-            </AlertDescription>
-          </Alert>
+          {/* Configuration Validator */}
+          <div className="mb-6">
+            <ConfigurationValidator onValidationChange={setConfigurationValid} />
+          </div>
 
-          {!result && (
+          {!result && configurationValid && (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleCreateAdmin)} className="space-y-4">
                 <FormField
@@ -330,7 +307,7 @@ export const PlatformAdminSetup: React.FC = () => {
 
                 <Button 
                   type="submit" 
-                  disabled={isLoading}
+                  disabled={isLoading || !configurationValid}
                   className="w-full"
                 >
                   {isLoading ? (
