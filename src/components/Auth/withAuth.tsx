@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, AuthState } from '@/context/AuthContext';
 import { CompletingSetup } from './CompletingSetup'; // New component
+import { SetupOrganization } from '@/components/SetupOrganization';
 import { RefreshCw } from 'lucide-react'; // For generic loading spinner
 import { useDevMode } from '@/hooks/useDevMode';
 import { Badge } from '@/components/ui/badge';
@@ -54,8 +55,9 @@ export const withAuth = <P extends object>(
         return <Component {...props} />;
       case AuthState.AUTHENTICATING:
       case AuthState.AUTHENTICATED_PENDING_PROFILE:
-      case AuthState.AUTHENTICATED_PENDING_ORGANIZATION:
         return <CompletingSetup />;
+      case AuthState.AUTHENTICATED_PENDING_ORGANIZATION:
+        return <SetupOrganization />;
       case AuthState.ANONYMOUS:
       case AuthState.AUTHENTICATION_FAILED:
         // Redirection is handled by useEffect. Showing a brief loading or null here.

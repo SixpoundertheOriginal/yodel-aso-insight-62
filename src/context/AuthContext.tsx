@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -79,15 +80,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           setAuthState(AuthState.AUTHENTICATED_COMPLETE);
         } else {
-          const errorMsg = orgResult.error?.message || 'Failed to set up your account.';
-          console.error(`[AUTH_PROVISIONING] Provisioning failed: ${errorMsg}`);
+          const errorMsg = orgResult.error?.message || 'Failed to set up your account automatically.';
+          console.error(`[AUTH_PROVISIONING] Automated provisioning failed: ${errorMsg}. User will be prompted to try manually.`);
           toast({
-            title: 'Account Setup Failed',
-            description: errorMsg,
-            variant: 'destructive',
+            title: 'Automatic Setup Failed',
+            description: `We couldn't set up your organization automatically. Please try again from the setup page.`,
+            variant: 'warning',
           });
+          // CRITICAL: We stay in a pending state, don't fail completely.
+          // This stops the logout loop.
           setAuthError(errorMsg);
-          setAuthState(AuthState.AUTHENTICATION_FAILED);
         }
       }
     } catch (error: any) {
