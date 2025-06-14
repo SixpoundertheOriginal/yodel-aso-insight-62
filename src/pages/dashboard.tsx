@@ -1,7 +1,6 @@
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
-import KpiCard from "../components/KpiCard";
 import TimeSeriesChart from "../components/TimeSeriesChart";
 import ComparisonChart from "../components/ComparisonChart";
 import AiInsightsBox from "../components/AiInsightsBox";
@@ -11,8 +10,6 @@ import { useAsoData } from "../context/AsoDataContext";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { useOrganization } from "../hooks/useOrganization";
 import { useAuth } from "../context/AuthContext";
-import { Toggle } from "@/components/ui/toggle";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ChartContainer from "@/components/ui/ChartContainer";
 import { chartConfig } from "@/utils/chartConfig";
@@ -22,6 +19,9 @@ import { usePermissions } from "../hooks/usePermissions";
 import { useDevMode } from "../hooks/useDevMode";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { DashboardHeader } from "../components/Dashboard/DashboardHeader";
+import { KpiGrid } from "../components/Dashboard/KpiGrid";
+import { DashboardControls } from "../components/Dashboard/DashboardControls";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
   const cvrValue = data.summary?.cvr?.value || 0;
   const cvrDelta = data.summary?.cvr?.delta || 0;
 
-  const { getHighestRole, isSuperAdmin, isOrganizationAdmin } = usePermissions(organization?.id);
+  const { getHighestRole } = usePermissions(organization?.id);
 
   return (
     <MainLayout>
@@ -109,31 +109,14 @@ const Dashboard: React.FC = () => {
           </AlertDescription>
         </Alert>
       )}
-      {/* Organization Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
-            <p className="text-zinc-400">
-              Welcome back, {profile?.first_name || user?.email || 'User'}
-              {getHighestRole() && (
-                <span className="ml-2 text-xs px-2 py-1 bg-zinc-700 rounded">
-                  {getHighestRole()?.replace('_', ' ')}
-                </span>
-              )}
-            </p>
-          </div>
-          
-          <PermissionGate permission="MANAGE_ORGANIZATION_USERS" organizationId={organization.id}>
-            <Button
-              variant="outline"
-              onClick={() => setShowUserManagement(!showUserManagement)}
-            >
-              {showUserManagement ? 'Hide' : 'Manage'} Users
-            </Button>
-          </PermissionGate>
-        </div>
-      </div>
+      
+      <DashboardHeader
+        organization={organization}
+        profile={profile}
+        getHighestRole={getHighestRole}
+        onToggleUserManagement={() => setShowUserManagement(!showUserManagement)}
+        showUserManagement={showUserManagement}
+      />
 
       {/* User Management Panel */}
       <PermissionGate permission="MANAGE_ORGANIZATION_USERS" organizationId={organization.id}>
@@ -145,44 +128,24 @@ const Dashboard: React.FC = () => {
       </PermissionGate>
 
       {/* KPI Cards */}
-      <PermissionGate permission="VIEW_DASHBOARD" organizationId={organization.id}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <KpiCard
-            title="Impressions"
-            value={impressionsValue}
-            delta={impressionsDelta}
-          />
-          <KpiCard
-            title="Downloads"
-            value={downloadsValue}
-            delta={downloadsDelta}
-          />
-          <KpiCard
-            title="Page Views"
-            value={pageViewsValue}
-            delta={pageViewsDelta}
-          />
-          <KpiCard 
-            title="CVR" 
-            value={cvrValue} 
-            delta={cvrDelta} 
-          />
-        </div>
-      </PermissionGate>
+      <KpiGrid
+        organizationId={organization.id}
+        impressionsValue={impressionsValue}
+        impressionsDelta={impressionsDelta}
+        downloadsValue={downloadsValue}
+        downloadsDelta={downloadsDelta}
+        pageViewsValue={pageViewsValue}
+        pageViewsDelta={pageViewsDelta}
+        cvrValue={cvrValue}
+        cvrDelta={cvrDelta}
+      />
 
-      {/* Exclude ASA Toggle */}
-      <PermissionGate permission="VIEW_ASO_METRICS" organizationId={organization.id}>
-        <div className="flex justify-end mb-4">
-          <div className="flex items-center">
-            <span className="text-sm text-zinc-400 mr-2">Exclude ASA</span>
-            <Toggle
-              pressed={excludeAsa}
-              onPressedChange={setExcludeAsa}
-              aria-label="Exclude Apple Search Ads"
-            />
-          </div>
-        </div>
-      </PermissionGate>
+      {/* Controls */}
+      <DashboardControls
+        organizationId={organization.id}
+        excludeAsa={excludeAsa}
+        setExcludeAsa={setExcludeAsa}
+      />
 
       {/* AI Insights Box */}
       <PermissionGate permission="VIEW_ASO_METRICS" organizationId={organization.id}>

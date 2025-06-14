@@ -4,3 +4,4 @@
 [functions.aso-chat]
 [functions.create-platform-admin]
 [functions.get-environment-config]
+[functions.bigquery-aso-data]

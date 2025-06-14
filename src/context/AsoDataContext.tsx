@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useAsoMetrics, DateRange, AsoData } from '../hooks/useAsoMetrics';
+import { DateRange, AsoData } from '../hooks/useAsoMetrics';
 import { useMockAsoData } from '../hooks/useMockAsoData';
 import { useDevMode } from '../hooks/useDevMode';
+import { useBigQueryAsoData } from '../hooks/useBigQueryAsoData';
 
 interface AsoFilters {
   clientList: string[];
@@ -48,7 +48,8 @@ export const AsoDataProvider: React.FC<AsoDataProviderProps> = ({ children }) =>
     appIds: [],
   });
   
-  const asoDataHook = isAuthBypassed ? useMockAsoData : useAsoMetrics;
+  // Use mock data in dev mode, and the BigQuery hook in "production"
+  const asoDataHook = isAuthBypassed ? useMockAsoData : useBigQueryAsoData;
   
   const { data, loading, error, apps, trafficSources } = asoDataHook(
     filters.dateRange,
