@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { createDemoOrganization } from '@/services/seedData';
+// import { createDemoOrganization } from '@/services/seedData'; // This will be replaced
+import { supabase } from '@/integrations/supabase/client';
 import { checkUserDataHealth } from '@/services/userManagement';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -61,19 +62,35 @@ export const SetupOrganization: React.FC = () => {
   };
 
   const handleCreateDemo = async () => {
-    if (!user) return;
+    if (!user || !user.email) {
+      toast({
+          title: 'Cannot Create Organization',
+          description: 'User email is not available. Please try logging in again.',
+          variant: 'destructive',
+      });
+      return;
+    }
 
     setLoading(true);
     try {
       console.log(`[UI] Starting demo organization creation for user ${user.id}`);
       
-      const result = await createDemoOrganization(user.id, user.email || '');
+      const emailPrefix = user.email.split('@')[0];
+      const safeSlugBase = emailPrefix.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const orgName = `${emailPrefix}'s Demo Org`;
+      const slug = `${safeSlugBase || 'demo'}-org-${Math.random().toString(36).substring(2, 8)}`;
+
+      console.log(`[UI] Calling create_organization_and_assign_admin with name: "${orgName}", slug: "${slug}"`);
+      
+      const { error: rpcError } = await supabase.rpc('create_organization_and_assign_admin', {
+        org_name: orgName,
+        org_slug: slug,
+      });
+
+      const result = { success: !rpcError, error: rpcError };
       
       if (result.success) {
-        let message = 'Your demo organization has been set up with sample data.';
-        if (result.userRepaired) {
-          message += ' We also fixed some account issues automatically.';
-        }
+        const message = 'Your demo organization has been set up with sample data.';
         
         toast({
           title: 'Demo organization created!',
@@ -88,7 +105,6 @@ export const SetupOrganization: React.FC = () => {
         
         console.error('Demo organization creation failed:', {
           error: result.error,
-          userRepaired: result.userRepaired
         });
         
         toast({

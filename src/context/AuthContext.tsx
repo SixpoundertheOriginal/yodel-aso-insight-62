@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { checkUserDataHealth } from '@/services/userManagement';
-import { createDemoOrganization } from '@/services/seedData';
+// import { createDemoOrganization } from '@/services/seedData'; // This will be replaced
 
 export enum AuthState {
   ANONYMOUS = 'ANONYMOUS', // Initial state, no user session
@@ -69,8 +69,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log(`[AUTH_PROVISIONING] Profile missing. Attempting to create profile and demo org.`);
         }
         
-        // createDemoOrganization handles profile creation/repair internally if needed.
-        const orgResult = await createDemoOrganization(currentUser.id, currentUser.email || '');
+        // Use the new secure RPC call instead of the direct insert
+        const emailPrefix = currentUser.email?.split('@')[0] || 'user';
+        const safeSlugBase = emailPrefix.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const orgName = `${emailPrefix}'s Demo Org`;
+        const slug = `${safeSlugBase || 'demo'}-org-${Math.random().toString(36).substring(2, 8)}`;
+        
+        console.log(`[AUTH_PROVISIONING] Calling create_organization_and_assign_admin with name: "${orgName}", slug: "${slug}"`);
+
+        const { error: rpcError } = await supabase.rpc('create_organization_and_assign_admin', {
+          org_name: orgName,
+          org_slug: slug
+        });
+        
+        const orgResult = { success: !rpcError, error: rpcError };
         console.log(`[AUTH_PROVISIONING] Demo organization creation result:`, orgResult);
 
         if (orgResult.success) {
@@ -79,6 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             description: 'Your profile and demo organization are ready.',
           });
           setAuthState(AuthState.AUTHENTICATED_COMPLETE);
+          // Reload to ensure all contexts are updated with new org info
+          setTimeout(() => window.location.reload(), 1000);
         } else {
           const errorMsg = orgResult.error?.message || 'Failed to set up your account automatically.';
           console.error(`[AUTH_PROVISIONING] Automated provisioning failed: ${errorMsg}. User will be prompted to try manually.`);
@@ -88,7 +102,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             variant: 'warning',
           });
           // CRITICAL: We stay in a pending state, don't fail completely.
-          // This stops the logout loop.
           setAuthError(errorMsg);
         }
       }
