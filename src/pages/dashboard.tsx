@@ -1,3 +1,4 @@
+
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -7,7 +8,7 @@ import ComparisonChart from "../components/ComparisonChart";
 import AiInsightsBox from "../components/AiInsightsBox";
 import { ChatInterface } from "../components/ChatInterface";
 import { ChatButton } from "../components/ChatButton";
-import { useAsoData } from "../context/AsoDataContextV2";
+import { useAsoData } from "../context/AsoDataContext";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { useOrganization } from "../hooks/useOrganization";
 import { useAuth } from "../context/AuthContext";

@@ -1,11 +1,14 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useMockAsoData, AsoData, DateRange } from '../hooks/useMockAsoData';
+import { useAsoMetrics, DateRange, AsoData } from '../hooks/useAsoMetrics';
+import { useMockAsoData } from '../hooks/useMockAsoData';
+import { useDevMode } from '../hooks/useDevMode';
 
 interface AsoFilters {
   clientList: string[];
   dateRange: DateRange;
   trafficSources: string[];
+  appIds: string[];
 }
 
 interface AsoDataContextType {
@@ -14,6 +17,8 @@ interface AsoDataContextType {
   error: Error | null;
   filters: AsoFilters;
   setFilters: React.Dispatch<React.SetStateAction<AsoFilters>>;
+  apps: any[];
+  trafficSourceOptions: any[];
 }
 
 const AsoDataContext = createContext<AsoDataContextType | undefined>(undefined);
@@ -23,27 +28,32 @@ interface AsoDataProviderProps {
 }
 
 export const AsoDataProvider: React.FC<AsoDataProviderProps> = ({ children }) => {
+  const { isAuthBypassed } = useDevMode();
+
   // Default filters
   const [filters, setFilters] = useState<AsoFilters>({
-    clientList: ["TUI", "YodelDelivery", "ClientX", "ClientY"],
+    clientList: [],
     dateRange: {
       from: new Date(new Date().setDate(new Date().getDate() - 30)), // 30 days ago
       to: new Date(), // today
     },
     trafficSources: [
       "App Store Search",
-      "App Store Browse",
+      "App Store Browse", 
       "Apple Search Ads",
-      "Web Referrer", 
+      "Web Referrer",
       "App Referrer",
       "Unknown"
     ],
+    appIds: [],
   });
   
-  const { data, loading, error } = useMockAsoData(
+  const asoDataHook = isAuthBypassed ? useMockAsoData : useAsoMetrics;
+  
+  const { data, loading, error, apps, trafficSources } = asoDataHook(
     filters.dateRange,
     filters.trafficSources,
-    [] // Pass empty array for appIds, as clientList is not used by the mock hook.
+    filters.appIds
   );
   
   const value = {
@@ -52,6 +62,8 @@ export const AsoDataProvider: React.FC<AsoDataProviderProps> = ({ children }) =>
     error,
     filters,
     setFilters,
+    apps,
+    trafficSourceOptions: trafficSources,
   };
   
   return (
