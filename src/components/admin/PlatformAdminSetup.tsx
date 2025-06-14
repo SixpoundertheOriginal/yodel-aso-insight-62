@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Shield, CheckCircle, AlertTriangle, Copy, Eye, EyeOff } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, Copy, Eye, EyeOff, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,6 +32,7 @@ interface AdminCreationResponse {
 export const PlatformAdminSetup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AdminCreationResponse | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
@@ -51,17 +52,75 @@ export const PlatformAdminSetup: React.FC = () => {
     try {
       setIsLoading(true);
       setResult(null);
+      setDebugInfo(null);
 
-      console.log('[ADMIN_SETUP] Creating platform admin for:', data.email);
+      console.log('[ADMIN_SETUP] Starting admin creation process...');
+      console.log('[ADMIN_SETUP] Request data:', { email: data.email });
+      console.log('[ADMIN_SETUP] Environment:', import.meta.env.DEV ? 'development' : 'production');
+      console.log('[ADMIN_SETUP] Supabase URL:', supabase.supabaseUrl);
 
       const { data: response, error } = await supabase.functions.invoke('create-platform-admin', {
         body: { email: data.email }
       });
 
+      // Enhanced logging for debugging
+      console.log('[ADMIN_SETUP] Edge Function Raw Response:', {
+        response,
+        error,
+        hasResponse: !!response,
+        hasError: !!error
+      });
+
       if (error) {
-        console.error('[ADMIN_SETUP] Edge function error:', error);
-        throw new Error(error.message || 'Failed to create platform administrator');
+        console.error('[ADMIN_SETUP] Detailed Error Information:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          details: error.details || error,
+          context: error.context || 'No context provided'
+        });
+
+        // Store debug info for UI display
+        setDebugInfo({
+          type: 'error',
+          error: {
+            message: error.message,
+            status: error.status,
+            statusText: error.statusText,
+            details: error.details || error
+          },
+          timestamp: new Date().toISOString()
+        });
+
+        // Provide specific error messages based on common issues
+        let userMessage = error.message || 'Edge Function call failed';
+        
+        if (error.status === 403) {
+          userMessage = 'Environment validation failed. Admin creation may not be enabled in Supabase secrets.';
+        } else if (error.status === 404) {
+          userMessage = 'Edge Function not found. Please ensure create-platform-admin function is deployed.';
+        } else if (error.status === 500) {
+          userMessage = 'Internal server error in Edge Function. Check function logs for details.';
+        }
+
+        throw new Error(userMessage);
       }
+
+      if (!response) {
+        console.error('[ADMIN_SETUP] No response data received from Edge Function');
+        setDebugInfo({
+          type: 'no_response',
+          timestamp: new Date().toISOString()
+        });
+        throw new Error('No response received from Edge Function');
+      }
+
+      console.log('[ADMIN_SETUP] Success response:', response);
+      setDebugInfo({
+        type: 'success',
+        response,
+        timestamp: new Date().toISOString()
+      });
 
       const adminResult = response as AdminCreationResponse;
       
@@ -140,6 +199,19 @@ export const PlatformAdminSetup: React.FC = () => {
             </AlertDescription>
           </Alert>
 
+          {/* Environment Configuration Alert */}
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Environment Setup:</strong> Ensure these Supabase secrets are configured:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li><code>ADMIN_CREATION_ENABLED=true</code></li>
+                <li><code>ENVIRONMENT=development</code></li>
+                <li><code>DEFAULT_ADMIN_EMAIL</code> (optional)</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+
           {!result && (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleCreateAdmin)} className="space-y-4">
@@ -182,6 +254,34 @@ export const PlatformAdminSetup: React.FC = () => {
                 </Button>
               </form>
             </Form>
+          )}
+
+          {/* Debug Information Display */}
+          {debugInfo && (
+            <div className="mt-4">
+              <Alert className="border-gray-200 bg-gray-50">
+                <Info className="h-4 w-4 text-gray-600" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-gray-800">Debug Information:</p>
+                    <pre className="text-xs bg-white p-2 rounded border overflow-auto">
+                      {JSON.stringify(debugInfo, null, 2)}
+                    </pre>
+                    {debugInfo.type === 'error' && debugInfo.error?.status === 403 && (
+                      <div className="text-sm text-gray-700 mt-2">
+                        <p><strong>Troubleshooting 403 Error:</strong></p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>Check Supabase secrets configuration</li>
+                          <li>Verify ADMIN_CREATION_ENABLED is set to 'true'</li>
+                          <li>Ensure ENVIRONMENT is set to 'development' or 'staging'</li>
+                          <li>Review Edge Function logs for detailed error information</li>
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
 
           {result && (
@@ -273,6 +373,7 @@ export const PlatformAdminSetup: React.FC = () => {
                 variant="outline"
                 onClick={() => {
                   setResult(null);
+                  setDebugInfo(null);
                   form.reset();
                   setShowPassword(false);
                 }}
