@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 // Define and export types here to be used across the app, fixing the export errors.
@@ -109,7 +108,7 @@ export const useMockAsoData = (
           setData(mockData);
           setLoading(false);
         }, 800);
-      } catch (err) => {
+      } catch (err) {
         setError(err instanceof Error ? err : new Error('Unknown error'));
         setLoading(false);
       }
