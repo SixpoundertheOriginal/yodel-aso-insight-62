@@ -1,3 +1,4 @@
+
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -67,6 +68,7 @@ const Dashboard: React.FC = () => {
 
   const periodComparison = useComparisonData("period");
   const yearComparison = useComparisonData("year");
+  const { getHighestRole } = usePermissions(organization?.id);
 
   // orgDetailsLoading is for fetching specific org data via useOrganization
   // asoDataLoading is for fetching ASO metrics
@@ -95,8 +97,6 @@ const Dashboard: React.FC = () => {
   const pageViewsDelta = data.summary?.productPageViews?.delta || 0;
   const cvrValue = data.summary?.cvr?.value || 0;
   const cvrDelta = data.summary?.cvr?.delta || 0;
-
-  const { getHighestRole } = usePermissions(organization?.id);
 
   return (
     <MainLayout>
