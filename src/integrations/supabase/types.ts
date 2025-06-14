@@ -11,33 +11,61 @@ export type Database = {
     Tables: {
       apps: {
         Row: {
-          bundle_id: string
+          app_icon_url: string | null
+          app_name: string
+          app_store_id: string | null
+          bundle_id: string | null
+          category: string | null
           created_at: string
+          created_by: string | null
+          developer_name: string | null
           id: string
-          name: string
+          is_active: boolean | null
           organization_id: string
           platform: string
+          settings: Json | null
           updated_at: string
         }
         Insert: {
-          bundle_id: string
+          app_icon_url?: string | null
+          app_name: string
+          app_store_id?: string | null
+          bundle_id?: string | null
+          category?: string | null
           created_at?: string
+          created_by?: string | null
+          developer_name?: string | null
           id?: string
-          name: string
+          is_active?: boolean | null
           organization_id: string
           platform: string
+          settings?: Json | null
           updated_at?: string
         }
         Update: {
-          bundle_id?: string
+          app_icon_url?: string | null
+          app_name?: string
+          app_store_id?: string | null
+          bundle_id?: string | null
+          category?: string | null
           created_at?: string
+          created_by?: string | null
+          developer_name?: string | null
           id?: string
-          name?: string
+          is_active?: boolean | null
           organization_id?: string
           platform?: string
+          settings?: Json | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "apps_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "apps_organization_id_fkey"
             columns: ["organization_id"]

@@ -129,9 +129,11 @@ export const createDemoOrganization = async (userId: string, email: string): Pro
     // Create demo app
     const appData: AppInsert = {
       organization_id: organization.id,
-      name: 'Demo App',
+      app_name: 'Demo App',
       bundle_id: 'com.example.demo',
       platform: 'ios',
+      app_store_id: '123456789',
+      created_by: userId,
     };
 
     const { data: app, error: appError } = await supabase
