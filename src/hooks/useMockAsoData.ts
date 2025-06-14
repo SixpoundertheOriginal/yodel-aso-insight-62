@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 export interface DateRange {
@@ -14,7 +13,7 @@ export interface MetricSummary {
 export interface AsoMetrics {
   impressions: MetricSummary;
   downloads: MetricSummary;
-  pageViews: MetricSummary; // Renamed from 'product_page_views' to match the actual data structure
+  productPageViews: MetricSummary;
   cvr: MetricSummary;
 }
 
@@ -28,7 +27,8 @@ export interface TimeSeriesPoint {
   date: string;
   impressions: number;
   downloads: number;
-  pageViews: number; // Renamed to be consistent with AsoMetrics
+  productPageViews: number;
+  pageViews: number;
 }
 
 export interface AsoData {
@@ -62,7 +62,7 @@ export const useMockAsoData = (
         const summary: AsoMetrics = {
           impressions: generateMetric(),
           downloads: generateMetric(),
-          pageViews: generateMetric(), // Renamed from 'product_page_views'
+          productPageViews: generateMetric(),
           cvr: { 
             value: parseFloat((Math.random() * 10).toFixed(2)), // 0 to 10%
             delta: parseFloat((Math.random() * 40 - 20).toFixed(1)) // -20% to +20%
@@ -79,11 +79,13 @@ export const useMockAsoData = (
           const currentDate = new Date(startDate);
           currentDate.setDate(startDate.getDate() + i);
           
+          const pageViews = Math.floor(Math.random() * 3000) + 300;
           timeseriesData.push({
             date: currentDate.toISOString().split('T')[0],
             impressions: Math.floor(Math.random() * 5000) + 500,
             downloads: Math.floor(Math.random() * 1000) + 100,
-            pageViews: Math.floor(Math.random() * 3000) + 300, // Renamed from 'pageViews'
+            productPageViews: pageViews,
+            pageViews: pageViews,
           });
         }
         

@@ -36,6 +36,7 @@ export interface TimeSeriesPoint {
   impressions: number;
   downloads: number;
   productPageViews: number;
+  pageViews: number; // For backward compatibility
 }
 
 export interface AsoData {
@@ -219,6 +220,7 @@ function processMetricsData(
       impressions: 0,
       downloads: 0,
       productPageViews: 0,
+      pageViews: 0,
     });
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -235,6 +237,7 @@ function processMetricsData(
       existing.impressions += metric.impressions;
       existing.downloads += metric.downloads;
       existing.productPageViews += metric.product_page_views;
+      existing.pageViews += metric.product_page_views; // For backward compatibility
     }
 
     // Update totals

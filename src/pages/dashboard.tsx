@@ -75,8 +75,8 @@ const Dashboard: React.FC = () => {
   const impressionsDelta = data.summary?.impressions?.delta || 0;
   const downloadsValue = data.summary?.downloads?.value || 0;
   const downloadsDelta = data.summary?.downloads?.delta || 0;
-  const pageViewsValue = data.summary?.pageViews?.value || 0;
-  const pageViewsDelta = data.summary?.pageViews?.delta || 0;
+  const pageViewsValue = data.summary?.productPageViews?.value || 0;
+  const pageViewsDelta = data.summary?.productPageViews?.delta || 0;
   const cvrValue = data.summary?.cvr?.value || 0;
   const cvrDelta = data.summary?.cvr?.delta || 0;
 
