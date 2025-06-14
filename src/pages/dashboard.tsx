@@ -10,6 +10,7 @@ import { ChatButton } from "../components/ChatButton";
 import { useAsoData } from "../context/AsoDataContextV2";
 import { useComparisonData } from "../hooks/useComparisonData";
 import { useOrganization } from "../hooks/useOrganization";
+import { useAuth } from "../context/AuthContext"; // Import useAuth
 import { Toggle } from "@/components/ui/toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import ChartContainer from "@/components/ui/ChartContainer";
@@ -18,6 +19,7 @@ import { chartConfig } from "@/utils/chartConfig";
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const { user } = useAuth(); // Get user from useAuth
   const { organization, profile, loading: orgDetailsLoading } = useOrganization();
   const { data, loading: asoDataLoading, filters, setFilters } = useAsoData();
 
