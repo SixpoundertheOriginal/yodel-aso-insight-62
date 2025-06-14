@@ -1,176 +1,167 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { ensureUserProfile, repairUserDataConsistency, checkUserDataHealth } from './userManagement';
+import { generateSlug } from '@/utils/stringUtils';
 import type { Database } from '@/integrations/supabase/types';
+import { ensureUserProfile, repairUserDataConsistency } from './userManagement';
+import { assignUserRole } from './roleManagement';
 
 type Organization = Database['public']['Tables']['organizations']['Row'];
+type OrganizationInsert = Database['public']['Tables']['organizations']['Insert'];
 type App = Database['public']['Tables']['apps']['Row'];
+type AppInsert = Database['public']['Tables']['apps']['Insert'];
+type AsoMetricInsert = Database['public']['Tables']['aso_metrics']['Insert'];
 
-interface CreateDemoResult {
+export interface OrganizationCreationResult {
   success: boolean;
   organization?: Organization;
   error?: Error;
   userRepaired?: boolean;
 }
 
-export const createDemoOrganization = async (userId: string, userEmail: string): Promise<CreateDemoResult> => {
+const seedAsoData = async (appId: string): Promise<void> => {
+  const today = new Date();
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateString = date.toISOString().split('T')[0];
+
+    const asoData: AsoMetricInsert = {
+      app_id: appId,
+      date: dateString,
+      impressions: Math.floor(Math.random() * 1000),
+      downloads: Math.floor(Math.random() * 100),
+      page_views: Math.floor(Math.random() * 500),
+    };
+
+    const { error } = await supabase
+      .from('aso_metrics')
+      .insert(asoData);
+
+    if (error) {
+      console.error('Failed to seed ASO data:', error);
+      throw new Error(`ASO data seeding failed: ${error.message}`);
+    }
+  }
+};
+
+export const createDemoOrganization = async (userId: string, email: string): Promise<OrganizationCreationResult> => {
   console.log(`[DEMO_ORG] Starting demo organization creation for user ${userId}`);
   
   try {
-    // PHASE 0: Crisis Containment - Ensure user profile exists
-    console.log(`[DEMO_ORG] Phase 0: Ensuring user profile exists`);
-    
-    let profileResult = await ensureUserProfile(userId, userEmail);
     let userRepaired = false;
     
-    // If profile creation failed, attempt emergency repair
-    if (!profileResult.success) {
-      console.log(`[DEMO_ORG] Profile creation failed, attempting emergency repair`);
-      profileResult = await repairUserDataConsistency(userId, userEmail);
-      userRepaired = true;
-      
-      if (!profileResult.success) {
-        console.error(`[DEMO_ORG] Emergency repair failed, cannot proceed`);
+    // Health check and repair
+    const healthCheckResult = await repairUserDataConsistency(userId, email);
+    if (!healthCheckResult.success) {
+      console.warn(`[DEMO_ORG] User data health check failed:`, healthCheckResult.error);
+      if (healthCheckResult.requiresManualFix) {
         return {
           success: false,
-          error: new Error(`Critical error: Cannot create user profile. ${profileResult.error?.message || 'Unknown error'}`),
-          userRepaired: false
+          error: new Error('User account requires manual repair. Please contact support.'),
         };
+      } else {
+        // Attempt to repair user data automatically
+        console.log(`[DEMO_ORG] Attempting to repair user data automatically`);
+        const repairResult = await repairUserDataConsistency(userId, email);
+        if (!repairResult.success) {
+          console.error(`[DEMO_ORG] User data repair failed:`, repairResult.error);
+          return {
+            success: false,
+            error: new Error(`Failed to repair user data: ${repairResult.error?.message}`),
+          };
+        } else {
+          console.log(`[DEMO_ORG] User data repaired successfully`);
+          userRepaired = true;
+        }
       }
     }
+    
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    // Verify user can create organization
-    const healthCheck = await checkUserDataHealth(userId);
-    if (!healthCheck.canCreateOrganization) {
-      console.error(`[DEMO_ORG] User health check failed:`, healthCheck.issues);
+    if (profileError) {
+      console.error(`[DEMO_ORG] Failed to fetch profile:`, profileError);
       return {
         success: false,
-        error: new Error(`User not ready for organization creation: ${healthCheck.issues.join(', ')}`),
-        userRepaired
+        error: new Error(`Failed to fetch profile: ${profileError.message}`),
       };
     }
 
-    console.log(`[DEMO_ORG] User profile verified, proceeding with organization creation`);
+    // Create organization
+    const organizationData: OrganizationInsert = {
+      name: `${profile?.first_name || 'Demo'} Organization`,
+      slug: generateSlug(`${profile?.first_name || 'demo'}-org-${Date.now()}`)
+    };
 
-    // PHASE 1: Create organization
-    const orgSlug = `demo-org-${userId.slice(0, 8)}-${Date.now()}`;
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
-      .insert({
-        name: 'Demo Organization',
-        slug: orgSlug,
-      })
+      .insert(organizationData)
       .select()
       .single();
 
     if (orgError) {
-      console.error(`[DEMO_ORG] Organization creation failed:`, orgError);
-      
-      // Provide specific error handling for RLS issues
-      if (orgError.code === '42501') {
-        return {
-          success: false,
-          error: new Error('Permission denied: User profile may be corrupted. Please try signing out and back in.'),
-          userRepaired
-        };
-      }
-      
+      console.error(`[DEMO_ORG] Failed to create organization:`, orgError);
       throw new Error(`Organization creation failed: ${orgError.message}`);
     }
 
-    console.log(`[DEMO_ORG] Organization created: ${organization.id}`);
+    console.log(`[DEMO_ORG] Created organization: ${organization.id}`);
 
-    // PHASE 2: Assign user to organization
+    // Update user profile with organization_id
     const { error: profileUpdateError } = await supabase
       .from('profiles')
-      .update({ 
-        organization_id: organization.id,
-        updated_at: new Date().toISOString()
-      })
+      .update({ organization_id: organization.id })
       .eq('id', userId);
 
     if (profileUpdateError) {
-      console.error(`[DEMO_ORG] Profile update failed:`, profileUpdateError);
-      
-      // Attempt to cleanup organization if profile update fails
-      await supabase.from('organizations').delete().eq('id', organization.id);
-      
-      throw new Error(`Failed to assign user to organization: ${profileUpdateError.message}`);
+      console.error(`[DEMO_ORG] Failed to update profile:`, profileUpdateError);
+      throw new Error(`Profile update failed: ${profileUpdateError.message}`);
     }
 
-    console.log(`[DEMO_ORG] User assigned to organization`);
+    // Assign ORGANIZATION_ADMIN role to the user
+    const roleResult = await assignUserRole(userId, 'ORGANIZATION_ADMIN', organization.id);
+    if (!roleResult.success) {
+      console.error(`[DEMO_ORG] Failed to assign role:`, roleResult.error);
+      throw new Error(`Role assignment failed: ${roleResult.error?.message}`);
+    }
 
-    // PHASE 3: Create demo app
-    const { data: demoApp, error: appError } = await supabase
+    // Create demo app
+    const appData: AppInsert = {
+      organization_id: organization.id,
+      name: 'Demo App',
+      bundle_id: 'com.example.demo',
+      platform: 'ios',
+    };
+
+    const { data: app, error: appError } = await supabase
       .from('apps')
-      .insert({
-        organization_id: organization.id,
-        name: 'Demo Mobile App',
-        bundle_id: 'com.demo.mobileapp',
-        platform: 'ios',
-      })
+      .insert(appData)
       .select()
       .single();
 
     if (appError) {
-      console.error(`[DEMO_ORG] Demo app creation failed:`, appError);
-      // Don't fail the entire process for demo app creation
-      console.log(`[DEMO_ORG] Continuing without demo app`);
-    } else {
-      console.log(`[DEMO_ORG] Demo app created: ${demoApp.id}`);
-
-      // PHASE 4: Create sample metrics (optional)
-      try {
-        await createSampleMetrics(demoApp.id);
-        console.log(`[DEMO_ORG] Sample metrics created`);
-      } catch (metricsError) {
-        console.error(`[DEMO_ORG] Sample metrics creation failed:`, metricsError);
-        // Non-critical error, continue
-      }
+      console.error(`[DEMO_ORG] Failed to create app:`, appError);
+      throw new Error(`App creation failed: ${appError.message}`);
     }
 
-    console.log(`[DEMO_ORG] Demo organization setup completed successfully`);
-    
-    return {
-      success: true,
+    console.log(`[DEMO_ORG] Created app: ${app.id}`);
+
+    // Seed ASO data
+    await seedAsoData(app.id);
+
+    console.log(`[DEMO_ORG] Demo organization setup completed successfully for user ${userId}`);
+    return { 
+      success: true, 
       organization,
       userRepaired
     };
 
   } catch (error: any) {
-    console.error(`[DEMO_ORG] Critical error during demo organization creation:`, error);
+    console.error(`[DEMO_ORG] Demo organization setup failed:`, error);
     return {
       success: false,
       error: error instanceof Error ? error : new Error(String(error)),
-      userRepaired: false
     };
-  }
-};
-
-const createSampleMetrics = async (appId: string): Promise<void> => {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30);
-
-  const sampleData = [];
-  
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
-    
-    sampleData.push({
-      app_id: appId,
-      date: date.toISOString().split('T')[0],
-      impressions: Math.floor(Math.random() * 10000) + 1000,
-      downloads: Math.floor(Math.random() * 500) + 50,
-      page_views: Math.floor(Math.random() * 2000) + 200,
-    });
-  }
-
-  const { error } = await supabase
-    .from('aso_metrics')
-    .insert(sampleData);
-
-  if (error) {
-    throw error;
   }
 };
