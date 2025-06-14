@@ -72,7 +72,12 @@ serve(async (req) => {
     
     const host = req.headers.get('host') || '';
     let environment = 'production';
-    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    
+    // Updated environment detection to include Lovable.dev domains
+    if (host.includes('localhost') || 
+        host.includes('127.0.0.1') || 
+        host.includes('lovableproject.com') ||
+        host.includes('lovable.dev')) {
       environment = 'development';
     } else if (host.includes('staging') || host.includes('preview')) {
       environment = 'staging';
