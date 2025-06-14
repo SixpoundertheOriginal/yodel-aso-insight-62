@@ -1,4 +1,3 @@
-
 // src/pages/dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { MainLayout } from "../layouts";
@@ -15,31 +14,16 @@ import { Toggle } from "@/components/ui/toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import ChartContainer from "@/components/ui/ChartContainer";
 import { chartConfig } from "@/utils/chartConfig";
-import { SetupOrganization } from "@/components/SetupOrganization";
 
 const Dashboard: React.FC = () => {
   const [excludeAsa, setExcludeAsa] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const { organization, profile, loading: orgLoading } = useOrganization();
-  const { data, loading, filters, setFilters } = useAsoData();
+  const { organization, profile, loading: orgDetailsLoading } = useOrganization();
+  const { data, loading: asoDataLoading, filters, setFilters } = useAsoData();
 
-  // Show setup screen if user doesn't have an organization
-  if (orgLoading) {
-    return (
-      <MainLayout>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 bg-zinc-800 animate-pulse rounded-md"></div>
-          ))}
-        </div>
-        <div className="h-64 bg-zinc-800 animate-pulse rounded-md"></div>
-      </MainLayout>
-    );
-  }
-
-  if (!organization) {
-    return <SetupOrganization />;
-  }
+  // The withAuth HOC now ensures this component only renders when authState is AUTHENTICATED_COMPLETE.
+  // Thus, user, profile, and a basic organization record are guaranteed to exist.
+  // The SetupOrganization flow is handled by AuthContext and withAuth.
 
   // Update traffic sources when excludeAsa toggles
   useEffect(() => {
@@ -60,7 +44,12 @@ const Dashboard: React.FC = () => {
   const periodComparison = useComparisonData("period");
   const yearComparison = useComparisonData("year");
 
-  if (loading || !data) {
+  // orgDetailsLoading is for fetching specific org data via useOrganization
+  // asoDataLoading is for fetching ASO metrics
+  if (orgDetailsLoading || asoDataLoading || !data || !organization) {
+    // Show a generic loading state for the dashboard content
+    // This assumes that by the time we are here, basic org/profile exists (guaranteed by withAuth)
+    // This loading is for the *content* of the dashboard.
     return (
       <MainLayout>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -88,7 +77,7 @@ const Dashboard: React.FC = () => {
       {/* Organization Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">{organization.name}</h1>
-        <p className="text-zinc-400">Welcome back, {profile?.first_name || 'User'}</p>
+        <p className="text-zinc-400">Welcome back, {profile?.first_name || user?.email || 'User'}</p>
       </div>
 
       {/* KPI Cards */}
