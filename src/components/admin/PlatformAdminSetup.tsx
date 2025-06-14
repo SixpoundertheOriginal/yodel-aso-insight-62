@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,6 +48,8 @@ export const PlatformAdminSetup: React.FC = () => {
   });
 
   const handleCreateAdmin = async (data: AdminFormValues) => {
+    const startTime = Date.now();
+    
     try {
       setIsLoading(true);
       setResult(null);
@@ -57,68 +58,111 @@ export const PlatformAdminSetup: React.FC = () => {
       console.log('[ADMIN_SETUP] Starting admin creation process...');
       console.log('[ADMIN_SETUP] Request data:', { email: data.email });
       console.log('[ADMIN_SETUP] Environment:', import.meta.env.DEV ? 'development' : 'production');
-      console.log('[ADMIN_SETUP] Supabase URL:', supabase.supabaseUrl);
+      console.log('[ADMIN_SETUP] Client URL:', window.location.origin);
+      console.log('[ADMIN_SETUP] Timestamp:', new Date().toISOString());
 
       const { data: response, error } = await supabase.functions.invoke('create-platform-admin', {
         body: { email: data.email }
       });
 
+      const duration = Date.now() - startTime;
+
       // Enhanced logging for debugging
-      console.log('[ADMIN_SETUP] Edge Function Raw Response:', {
-        response,
-        error,
+      console.log('[ADMIN_SETUP] Edge Function Response Summary:', {
         hasResponse: !!response,
-        hasError: !!error
+        hasError: !!error,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
       });
 
       if (error) {
-        console.error('[ADMIN_SETUP] Detailed Error Information:', {
+        console.error('[ADMIN_SETUP] Detailed Error Analysis:', {
           message: error.message,
           status: error.status,
           statusText: error.statusText,
-          details: error.details || error,
-          context: error.context || 'No context provided'
+          details: error.details || 'No additional details',
+          context: error.context || 'No context provided',
+          duration: `${duration}ms`,
+          requestTime: new Date().toISOString()
         });
 
-        // Store debug info for UI display
+        // Store comprehensive debug info for UI display
         setDebugInfo({
           type: 'error',
           error: {
             message: error.message,
             status: error.status,
             statusText: error.statusText,
-            details: error.details || error
+            details: error.details || error,
+            duration: `${duration}ms`
           },
-          timestamp: new Date().toISOString()
+          environment: {
+            isDev: import.meta.env.DEV,
+            origin: window.location.origin,
+            userAgent: navigator.userAgent.substring(0, 100) + '...'
+          },
+          timestamp: new Date().toISOString(),
+          troubleshooting: this.getTroubleshootingSteps(error.status)
         });
 
-        // Provide specific error messages based on common issues
+        // Provide specific error messages and guidance
         let userMessage = error.message || 'Edge Function call failed';
+        let troubleshootingGuidance = '';
         
-        if (error.status === 403) {
-          userMessage = 'Environment validation failed. Admin creation may not be enabled in Supabase secrets.';
-        } else if (error.status === 404) {
-          userMessage = 'Edge Function not found. Please ensure create-platform-admin function is deployed.';
-        } else if (error.status === 500) {
-          userMessage = 'Internal server error in Edge Function. Check function logs for details.';
+        switch (error.status) {
+          case 403:
+            userMessage = 'Environment validation failed. Admin creation is restricted.';
+            troubleshootingGuidance = 'Check Supabase secrets: ADMIN_CREATION_ENABLED=true, ENVIRONMENT=development';
+            break;
+          case 404:
+            userMessage = 'Edge Function not found. Deployment may be required.';
+            troubleshootingGuidance = 'Verify create-platform-admin function is deployed to Supabase';
+            break;
+          case 500:
+            userMessage = 'Internal server error in Edge Function.';
+            troubleshootingGuidance = 'Review Edge Function logs for detailed error information';
+            break;
+          case 409:
+            userMessage = 'Platform administrator already exists.';
+            troubleshootingGuidance = 'Only one super admin is allowed per platform';
+            break;
+          default:
+            troubleshootingGuidance = 'Review console logs and Edge Function logs for details';
         }
 
-        throw new Error(userMessage);
+        console.error('[ADMIN_SETUP] User guidance:', { userMessage, troubleshootingGuidance });
+        throw new Error(`${userMessage}\n\nTroubleshooting: ${troubleshootingGuidance}`);
       }
 
       if (!response) {
         console.error('[ADMIN_SETUP] No response data received from Edge Function');
         setDebugInfo({
           type: 'no_response',
+          duration: `${duration}ms`,
+          environment: {
+            isDev: import.meta.env.DEV,
+            origin: window.location.origin
+          },
           timestamp: new Date().toISOString()
         });
         throw new Error('No response received from Edge Function');
       }
 
-      console.log('[ADMIN_SETUP] Success response:', response);
+      console.log('[ADMIN_SETUP] Success response received:', {
+        success: response.success,
+        hasAdminId: !!response.adminId,
+        hasPassword: !!response.temporaryPassword,
+        duration: `${duration}ms`
+      });
+      
       setDebugInfo({
         type: 'success',
-        response,
+        response: {
+          success: response.success,
+          message: response.message,
+          hasCredentials: !!(response.adminId && response.temporaryPassword)
+        },
+        duration: `${duration}ms`,
         timestamp: new Date().toISOString()
       });
 
@@ -136,10 +180,11 @@ export const PlatformAdminSetup: React.FC = () => {
         variant: "default"
       });
 
-      console.log('[ADMIN_SETUP] Admin created successfully');
+      console.log('[ADMIN_SETUP] Admin creation completed successfully');
 
     } catch (error) {
-      console.error('[ADMIN_SETUP] Creation failed:', error);
+      const duration = Date.now() - startTime;
+      console.error('[ADMIN_SETUP] Creation failed after', `${duration}ms:`, error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
@@ -150,11 +195,41 @@ export const PlatformAdminSetup: React.FC = () => {
 
       toast({
         title: "Admin Creation Failed",
-        description: errorMessage,
+        description: errorMessage.split('\n')[0], // Only show first line in toast
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getTroubleshootingSteps = (status?: number) => {
+    switch (status) {
+      case 403:
+        return [
+          'Verify Supabase secrets are configured',
+          'Check ADMIN_CREATION_ENABLED=true',
+          'Ensure ENVIRONMENT=development or staging',
+          'Review Edge Function deployment status'
+        ];
+      case 404:
+        return [
+          'Confirm Edge Function is deployed',
+          'Check function name: create-platform-admin',
+          'Review Supabase project configuration'
+        ];
+      case 500:
+        return [
+          'Check Edge Function logs for errors',
+          'Verify database connectivity',
+          'Review function permissions'
+        ];
+      default:
+        return [
+          'Review console logs for details',
+          'Check Edge Function logs',
+          'Verify network connectivity'
+        ];
     }
   };
 
@@ -199,16 +274,33 @@ export const PlatformAdminSetup: React.FC = () => {
             </AlertDescription>
           </Alert>
 
-          {/* Environment Configuration Alert */}
+          {/* Enhanced Environment Configuration Alert */}
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <Info className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              <strong>Environment Setup:</strong> Ensure these Supabase secrets are configured:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li><code>ADMIN_CREATION_ENABLED=true</code></li>
-                <li><code>ENVIRONMENT=development</code></li>
-                <li><code>DEFAULT_ADMIN_EMAIL</code> (optional)</li>
-              </ul>
+              <strong>Environment Setup Required:</strong> Configure these Supabase secrets for admin creation:
+              <div className="mt-3 space-y-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <code className="bg-white px-2 py-1 rounded text-xs font-mono">
+                      ADMIN_CREATION_ENABLED
+                    </code>
+                    <p className="text-xs mt-1">Set to: <strong>true</strong></p>
+                  </div>
+                  <div>
+                    <code className="bg-white px-2 py-1 rounded text-xs font-mono">
+                      ENVIRONMENT
+                    </code>
+                    <p className="text-xs mt-1">Set to: <strong>development</strong></p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <code className="bg-white px-2 py-1 rounded text-xs font-mono">
+                    DEFAULT_ADMIN_EMAIL
+                  </code>
+                  <span className="text-xs ml-2">(optional fallback email)</span>
+                </div>
+              </div>
             </AlertDescription>
           </Alert>
 
@@ -256,28 +348,72 @@ export const PlatformAdminSetup: React.FC = () => {
             </Form>
           )}
 
-          {/* Debug Information Display */}
+          {/* Enhanced Debug Information Display */}
           {debugInfo && (
             <div className="mt-4">
               <Alert className="border-gray-200 bg-gray-50">
                 <Info className="h-4 w-4 text-gray-600" />
                 <AlertDescription>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <p className="font-semibold text-gray-800">Debug Information:</p>
-                    <pre className="text-xs bg-white p-2 rounded border overflow-auto">
-                      {JSON.stringify(debugInfo, null, 2)}
-                    </pre>
-                    {debugInfo.type === 'error' && debugInfo.error?.status === 403 && (
-                      <div className="text-sm text-gray-700 mt-2">
-                        <p><strong>Troubleshooting 403 Error:</strong></p>
-                        <ol className="list-decimal list-inside space-y-1">
-                          <li>Check Supabase secrets configuration</li>
-                          <li>Verify ADMIN_CREATION_ENABLED is set to 'true'</li>
-                          <li>Ensure ENVIRONMENT is set to 'development' or 'staging'</li>
-                          <li>Review Edge Function logs for detailed error information</li>
-                        </ol>
+                    
+                    {/* Error Analysis */}
+                    {debugInfo.type === 'error' && (
+                      <div className="space-y-2">
+                        <div className="bg-red-50 p-3 rounded border border-red-200">
+                          <p className="text-sm font-medium text-red-800">Error Details:</p>
+                          <ul className="text-xs text-red-700 mt-1 space-y-1">
+                            <li><strong>Status:</strong> {debugInfo.error.status}</li>
+                            <li><strong>Message:</strong> {debugInfo.error.message}</li>
+                            <li><strong>Duration:</strong> {debugInfo.error.duration}</li>
+                          </ul>
+                        </div>
+                        
+                        {debugInfo.troubleshooting && (
+                          <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                            <p className="text-sm font-medium text-yellow-800">Troubleshooting Steps:</p>
+                            <ol className="list-decimal list-inside text-xs text-yellow-700 mt-1 space-y-1">
+                              {debugInfo.troubleshooting.map((step: string, index: number) => (
+                                <li key={index}>{step}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    {/* Success Information */}
+                    {debugInfo.type === 'success' && (
+                      <div className="bg-green-50 p-3 rounded border border-green-200">
+                        <p className="text-sm font-medium text-green-800">Success Details:</p>
+                        <ul className="text-xs text-green-700 mt-1 space-y-1">
+                          <li><strong>Duration:</strong> {debugInfo.duration}</li>
+                          <li><strong>Credentials Generated:</strong> {debugInfo.response.hasCredentials ? 'Yes' : 'No'}</li>
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Environment Context */}
+                    {debugInfo.environment && (
+                      <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                        <p className="text-sm font-medium text-blue-800">Environment Context:</p>
+                        <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                          <li><strong>Development Mode:</strong> {debugInfo.environment.isDev ? 'Yes' : 'No'}</li>
+                          <li><strong>Origin:</strong> {debugInfo.environment.origin}</li>
+                          <li><strong>Timestamp:</strong> {debugInfo.timestamp}</li>
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Raw Debug Data (Collapsible) */}
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
+                        Show Raw Debug Data
+                      </summary>
+                      <pre className="bg-white p-2 rounded border mt-2 overflow-auto text-xs">
+                        {JSON.stringify(debugInfo, null, 2)}
+                      </pre>
+                    </details>
                   </div>
                 </AlertDescription>
               </Alert>
