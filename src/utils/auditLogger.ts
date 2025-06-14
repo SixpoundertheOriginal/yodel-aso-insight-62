@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -76,6 +75,7 @@ export async function logAuditEvent(payload: AuditEventPayload) {
 export async function logAdminAction(action: string, details?: Record<string, any>) {
   await logAuditEvent({
     action,
+    resource_type: 'platform', // FIX: Provide a resource_type for platform actions.
     details,
     // organization_id is intentionally omitted for platform-level events.
   });
