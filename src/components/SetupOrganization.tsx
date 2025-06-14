@@ -26,13 +26,19 @@ export const SetupOrganization: React.FC = () => {
         // Refresh the page to load the new organization
         window.location.reload();
       } else {
-        throw result.error;
+        // Ensure result.error is treated as an Error type or similar
+        const errorToThrow = result.error instanceof Error ? result.error : new Error(String(result.error?.message || 'Unknown error during organization creation'));
+        if (result.error && typeof result.error === 'object' && 'message' in result.error) {
+          // Augment the error with more details if available
+          (errorToThrow as any).details = result.error;
+        }
+        throw errorToThrow;
       }
-    } catch (error) {
-      console.error('Error creating demo organization:', error);
+    } catch (error: any) {
+      console.error('Detailed error creating demo organization:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       toast({
-        title: 'Error',
-        description: 'Failed to create demo organization. Please try again.',
+        title: 'Error Creating Organization',
+        description: error.message || 'Failed to create demo organization. Please check console for details.',
         variant: 'destructive',
       });
     } finally {
@@ -53,7 +59,7 @@ export const SetupOrganization: React.FC = () => {
         <CardContent>
           <Button 
             onClick={handleCreateDemo} 
-            disabled={loading}
+            disabled={loading || !user} // Also disable if user is somehow null
             className="w-full"
           >
             {loading ? 'Creating Demo Organization...' : 'Create Demo Organization'}
@@ -63,3 +69,4 @@ export const SetupOrganization: React.FC = () => {
     </div>
   );
 };
+
