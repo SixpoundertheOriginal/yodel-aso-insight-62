@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from './useOrganization';
@@ -28,7 +27,7 @@ export interface TrafficSource {
 export interface AggregatedMetrics {
   impressions: { value: number; delta: number };
   downloads: { value: number; delta: number };
-  pageViews: { value: number; delta: number };
+  productPageViews: { value: number; delta: number };
   cvr: { value: number; delta: number };
 }
 
@@ -36,7 +35,7 @@ export interface TimeSeriesPoint {
   date: string;
   impressions: number;
   downloads: number;
-  pageViews: number;
+  productPageViews: number;
 }
 
 export interface AsoData {
@@ -146,27 +145,16 @@ export const useAsoMetrics = (
         // Filter apps if specific app IDs provided
         const targetAppIds = appIds.length > 0 ? appIds : apps.map(app => app.id);
         
-        // Filter traffic sources if specific sources provided
-        let targetSourceIds: string[] = [];
-        if (trafficSources.length > 0) {
-          targetSourceIds = allTrafficSources
-            .filter(source => trafficSources.includes(source.display_name))
-            .map(source => source.id);
-        }
-
         // Build query
         let query = supabase
           .from('aso_metrics')
-          .select(`
-            *,
-            traffic_sources!inner(name, display_name)
-          `)
+          .select(`*`)
           .in('app_id', targetAppIds)
           .gte('date', dateRange.from.toISOString().split('T')[0])
           .lte('date', dateRange.to.toISOString().split('T')[0]);
 
-        if (targetSourceIds.length > 0) {
-          query = query.in('traffic_source_id', targetSourceIds);
+        if (trafficSources.length > 0) {
+          query = query.in('data_source', trafficSources);
         }
 
         const { data: metricsData, error: metricsError } = await query;
@@ -230,7 +218,7 @@ function processMetricsData(
       date: dateStr,
       impressions: 0,
       downloads: 0,
-      pageViews: 0,
+      productPageViews: 0,
     });
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -238,8 +226,7 @@ function processMetricsData(
   // Aggregate metrics
   let totalImpressions = 0;
   let totalDownloads = 0;
-  let totalPageViews = 0;
-  let totalConversions = 0;
+  let totalProductPageViews = 0;
 
   metrics.forEach((metric) => {
     // Update time series
@@ -247,16 +234,16 @@ function processMetricsData(
     if (existing) {
       existing.impressions += metric.impressions;
       existing.downloads += metric.downloads;
-      existing.pageViews += metric.page_views;
+      existing.productPageViews += metric.product_page_views;
     }
 
     // Update totals
     totalImpressions += metric.impressions;
     totalDownloads += metric.downloads;
-    totalPageViews += metric.page_views;
+    totalProductPageViews += metric.product_page_views;
 
     // Update traffic source totals
-    const sourceName = metric.traffic_sources?.display_name || 'Unknown';
+    const sourceName = metric.data_source || 'Unknown';
     const existing_source = trafficSourceMap.get(sourceName);
     if (existing_source) {
       existing_source.value += metric.downloads;
@@ -266,12 +253,12 @@ function processMetricsData(
   });
 
   // Calculate CVR
-  const cvr = totalPageViews > 0 ? (totalDownloads / totalPageViews) * 100 : 0;
+  const cvr = totalProductPageViews > 0 ? (totalDownloads / totalProductPageViews) * 100 : 0;
 
   // Mock previous period data for delta calculations (in a real implementation, you'd fetch actual historical data)
   const mockPreviousImpressions = totalImpressions * (0.85 + Math.random() * 0.3);
   const mockPreviousDownloads = totalDownloads * (0.85 + Math.random() * 0.3);
-  const mockPreviousPageViews = totalPageViews * (0.85 + Math.random() * 0.3);
+  const mockPreviousPageViews = totalProductPageViews * (0.85 + Math.random() * 0.3);
   const mockPreviousCvr = cvr * (0.85 + Math.random() * 0.3);
 
   return {
@@ -284,9 +271,9 @@ function processMetricsData(
         value: totalDownloads,
         delta: totalDownloads > 0 ? ((totalDownloads - mockPreviousDownloads) / mockPreviousDownloads) * 100 : 0,
       },
-      pageViews: {
-        value: totalPageViews,
-        delta: totalPageViews > 0 ? ((totalPageViews - mockPreviousPageViews) / mockPreviousPageViews) * 100 : 0,
+      productPageViews: {
+        value: totalProductPageViews,
+        delta: totalProductPageViews > 0 ? ((totalProductPageViews - mockPreviousPageViews) / mockPreviousPageViews) * 100 : 0,
       },
       cvr: {
         value: parseFloat(cvr.toFixed(2)),

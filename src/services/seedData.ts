@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { generateSlug } from '@/utils/stringUtils';
 import type { Database } from '@/integrations/supabase/types';
@@ -17,8 +18,10 @@ export interface OrganizationCreationResult {
   userRepaired?: boolean;
 }
 
-const seedAsoData = async (appId: string): Promise<void> => {
+const seedAsoData = async (appId: string, organizationId: string): Promise<void> => {
   const today = new Date();
+  const dataSources = ['App Store Search', 'App Store Browse', 'Web Referrer', 'App Referrer', 'Unknown'];
+
   for (let i = 0; i < 30; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() - i);
@@ -26,10 +29,12 @@ const seedAsoData = async (appId: string): Promise<void> => {
 
     const asoData: AsoMetricInsert = {
       app_id: appId,
+      organization_id: organizationId,
       date: dateString,
       impressions: Math.floor(Math.random() * 1000),
       downloads: Math.floor(Math.random() * 100),
-      page_views: Math.floor(Math.random() * 500),
+      product_page_views: Math.floor(Math.random() * 500),
+      data_source: dataSources[Math.floor(Math.random() * dataSources.length)],
     };
 
     const { error } = await supabase
@@ -150,7 +155,7 @@ export const createDemoOrganization = async (userId: string, email: string): Pro
     console.log(`[DEMO_ORG] Created app: ${app.id}`);
 
     // Seed ASO data
-    await seedAsoData(app.id);
+    await seedAsoData(app.id, organization.id);
 
     console.log(`[DEMO_ORG] Demo organization setup completed successfully for user ${userId}`);
     return { 

@@ -10,7 +10,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from "recharts";
-import { TimeSeriesPoint } from "@/hooks/useMockAsoData";
+import { TimeSeriesPoint } from "@/hooks/useAsoMetrics";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { chartColors, chartConfig } from "@/utils/chartConfig";
 
@@ -33,7 +33,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
   const chartConfigObj = {
     impressions: { color: chartColors.impressions },
     downloads: { color: chartColors.downloads },
-    pageViews: { color: chartColors.pageViews }
+    productPageViews: { color: chartColors.pageViews }
   };
   
   return (
@@ -50,7 +50,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
           </div>
           <div className="flex items-center">
             <div className="w-3 h-3 bg-purple-500 rounded-full mr-2" style={{ backgroundColor: chartColors.pageViews }}></div>
-            <span className="text-sm text-zinc-400">Page Views</span>
+            <span className="text-sm text-zinc-400">Product Page Views</span>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = React.memo(({
             />
             <Line 
               type="monotone" 
-              dataKey="pageViews" 
+              dataKey="productPageViews" 
               stroke={chartColors.pageViews}
               strokeWidth={2}
               dot={false}

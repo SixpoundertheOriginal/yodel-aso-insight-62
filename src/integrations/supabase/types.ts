@@ -79,38 +79,50 @@ export type Database = {
         Row: {
           app_id: string
           conversion_rate: number | null
+          country: string | null
           created_at: string
+          data_source: string | null
           date: string
           downloads: number
           id: string
           impressions: number
-          page_views: number
-          traffic_source_id: string | null
-          updated_at: string
+          organization_id: string
+          product_page_views: number
+          raw_data: Json | null
+          revenue: number | null
+          sessions: number | null
         }
         Insert: {
           app_id: string
           conversion_rate?: number | null
+          country?: string | null
           created_at?: string
+          data_source?: string | null
           date: string
           downloads?: number
           id?: string
           impressions?: number
-          page_views?: number
-          traffic_source_id?: string | null
-          updated_at?: string
+          organization_id: string
+          product_page_views?: number
+          raw_data?: Json | null
+          revenue?: number | null
+          sessions?: number | null
         }
         Update: {
           app_id?: string
           conversion_rate?: number | null
+          country?: string | null
           created_at?: string
+          data_source?: string | null
           date?: string
           downloads?: number
           id?: string
           impressions?: number
-          page_views?: number
-          traffic_source_id?: string | null
-          updated_at?: string
+          organization_id?: string
+          product_page_views?: number
+          raw_data?: Json | null
+          revenue?: number | null
+          sessions?: number | null
         }
         Relationships: [
           {
@@ -121,10 +133,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "aso_metrics_traffic_source_id_fkey"
-            columns: ["traffic_source_id"]
+            foreignKeyName: "aso_metrics_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "traffic_sources"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
