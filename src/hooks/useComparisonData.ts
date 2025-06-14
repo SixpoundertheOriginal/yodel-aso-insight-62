@@ -1,7 +1,7 @@
 
 // src/hooks/useComparisonData.ts
 import { useMemo } from 'react';
-import { useAsoData } from '../context/AsoDataContextV2';
+import { useAsoData } from '../context/AsoDataContext';
 import { standardizeChartData } from '../utils/format';
 import { AsoData } from './useAsoMetrics';
 
