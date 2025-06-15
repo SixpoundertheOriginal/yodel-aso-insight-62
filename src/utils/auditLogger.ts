@@ -28,20 +28,26 @@ export async function logAuditEvent(payload: AuditEventPayload) {
       return;
     }
     
-    // The RLS policy for inserting audit logs might require an organization_id.
-    // Platform-level actions (with null organization_id) could fail to insert
-    // until the RLS policy is updated to allow this for SUPER_ADMINs.
+    // Enhanced validation: platform-level actions require proper permission validation
     if (!payload.organization_id) {
+      // For platform-level actions, verify the user has appropriate permissions
+      const { data: hasPermission } = await supabase.rpc('check_user_permission', {
+        permission_to_check: 'PLATFORM_CREATE_AUDIT_LOGS'
+      });
+      
+      if (!hasPermission) {
         console.warn(
-            'Attempting to log a platform-level action without an organization_id. This may be blocked by RLS.', 
-            { action: payload.action }
+          'Platform-level audit action attempted without proper permissions',
+          { action: payload.action, userId: finalUserId }
         );
+        return;
+      }
     }
 
     const { error } = await supabase.from('audit_logs').insert({
       ...payload,
       user_id: finalUserId,
-      organization_id: payload.organization_id || null, // Pass null if undefined
+      organization_id: payload.organization_id || null,
       details: {
         ...payload.details,
         logged_at: new Date().toISOString(),
@@ -54,9 +60,12 @@ export async function logAuditEvent(payload: AuditEventPayload) {
 
     if (error) {
       if (error.message.includes('new row violates row-level security policy')) {
-        console.error(`Audit Log RLS Policy Violation: The action '${payload.action}' could not be logged. This is likely because a platform-level action was performed without an organization context, and the current RLS policy requires one. A SUPER_ADMIN role might be needed to insert logs without an organization_id.`, { error: error.message });
+        console.error(
+          `Audit Log RLS Policy Violation: The action '${payload.action}' could not be logged. User may lack required permissions.`,
+          { error: error.message, userId: finalUserId, organizationId: payload.organization_id }
+        );
       } else {
-        throw error;
+        console.error('Failed to write audit log:', error);
       }
     }
 

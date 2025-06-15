@@ -2,6 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
+import { PermissionValidator, RateLimiter } from '../../../src/utils/permissionMiddleware.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -206,6 +207,22 @@ serve(async (req) => {
   console.log(`[ADMIN_CREATION] Request received from IP: ${clientIp}`);
 
   try {
+    // Rate limiting: 3 attempts per hour per IP
+    if (RateLimiter.isRateLimited(`admin-creation:${clientIp}`, 3, 3600000)) {
+      return RateLimiter.createRateLimitResponse(corsHeaders);
+    }
+
+    // Enhanced security validation using permission middleware
+    const validator = new PermissionValidator(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    const authHeader = req.headers.get('Authorization');
+    
+    const validation = await validator.validatePlatformAdmin(authHeader);
+    if (!validation.isValid) {
+      return validator.createErrorResponse(validation, corsHeaders);
+    }
+
+    console.log(`[ADMIN_CREATION] Permission validation passed for user: ${validation.user?.email}`);
+
     // Multi-layer security validation
     console.log('[ADMIN_CREATION] Validating environment security...');
     
