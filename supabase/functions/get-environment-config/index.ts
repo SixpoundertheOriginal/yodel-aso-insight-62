@@ -1,6 +1,6 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { PermissionValidator, RateLimiter } from '../../../src/utils/permissionMiddleware.ts';
+import { PermissionValidator, RateLimiter } from '../_shared/permissionMiddleware.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
