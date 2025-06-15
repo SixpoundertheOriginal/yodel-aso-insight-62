@@ -9,7 +9,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Enterprise security configuration
 const ADMIN_CREATION_ENABLED = Deno.env.get('ADMIN_CREATION_ENABLED');
 const ENVIRONMENT = Deno.env.get('ENVIRONMENT');
 const DEFAULT_ADMIN_EMAIL = Deno.env.get('DEFAULT_ADMIN_EMAIL');
@@ -17,14 +16,12 @@ const MAX_ADMIN_ATTEMPTS = parseInt(Deno.env.get('MAX_ADMIN_ATTEMPTS') || '3');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-// Initialize Supabase client with service role for admin operations
 const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
 interface AdminCreationRequest {
   email?: string;
   temporaryPassword?: string;
 }
-
 interface AdminCreationResponse {
   success: boolean;
   message: string;
@@ -32,116 +29,139 @@ interface AdminCreationResponse {
   temporaryPassword?: string;
   nextSteps?: string[];
 }
+type CreationStep = 'start'|'create_user'|'verify_profile'|'assign_role'|'audit'|'finish'|'error';
+type CreationState =
+  'initiated'|'user_created'|'profile_verified'|'role_assigned'|'audit_logged'|'completed'|'failed';
 
-// Generate cryptographically secure temporary password
 function generateSecurePassword(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
   const array = new Uint8Array(16);
   crypto.getRandomValues(array);
   return Array.from(array, byte => chars[byte % chars.length]).join('');
 }
-
-// Check if environment allows admin creation
 function validateEnvironment(): { valid: boolean; message?: string } {
   if (ADMIN_CREATION_ENABLED !== 'true') {
     return { valid: false, message: 'Admin creation is disabled in this environment' };
   }
-  
   if (!ENVIRONMENT || !['development', 'staging'].includes(ENVIRONMENT.toLowerCase())) {
     return { valid: false, message: 'Admin creation only allowed in development or staging environments' };
   }
-  
   return { valid: true };
 }
 
-// Check if SUPER_ADMIN already exists
-async function checkExistingSuperAdmin(): Promise<{ exists: boolean; count: number }> {
+async function getSessionByEmail(email: string) {
+  const { data, error } = await supabaseAdmin
+    .from('admin_creation_sessions')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+  if (error) {
+    console.error('[SESSION] Lookup error:', error);
+    return null;
+  }
+  return data ?? null;
+}
+
+async function createOrUpdateSession(email: string, ip_address: string, user_id?: string | null, state?: CreationState, step?: CreationStep, err?: string) {
+  // Insert or update the session
+  let result;
+  if (!(await getSessionByEmail(email))) {
+    // Insert
+    result = await supabaseAdmin.from('admin_creation_sessions')
+      .insert({
+        email,
+        ip_address,
+        state: state ?? 'initiated',
+        step: step ?? 'start',
+        user_id: user_id || null,
+        error_details: err ?? null,
+      });
+  } else {
+    // Update
+    result = await supabaseAdmin.from('admin_creation_sessions')
+      .update({
+        state: state ?? undefined,
+        step: step ?? undefined,
+        user_id: user_id ?? undefined,
+        updated_at: new Date().toISOString(),
+        error_details: err ?? undefined
+      })
+      .eq('email', email);
+  }
+  if (result.error) console.warn('[SESSION] Upsert failed:', result.error);
+  return result.data;
+}
+
+async function deleteSession(email: string) {
+  const { error } = await supabaseAdmin.from('admin_creation_sessions').delete().eq('email', email);
+  if (error) { console.warn('[SESSION] Delete error:', error); }
+}
+
+async function getExistingSuperAdmin() {
   try {
     const { data, error } = await supabaseAdmin
       .from('user_roles')
       .select('id')
       .eq('role', 'SUPER_ADMIN')
       .is('organization_id', null);
-
-    if (error) {
-      console.error('Error checking existing super admin:', error);
-      throw new Error('Failed to verify existing admin status');
-    }
-
-    return { exists: (data?.length || 0) > 0, count: data?.length || 0 };
-  } catch (error) {
-    console.error('Database error checking super admin:', error);
-    throw error;
+    if (error) throw error;
+    return { exists: (data?.length ?? 0) > 0, count: data?.length ?? 0 };
+  } catch (err) {
+    console.error('DB error getExistingSuperAdmin:', err);
+    throw err;
   }
 }
 
-// Create auth user and assign SUPER_ADMIN role atomically
-async function createPlatformAdmin(email: string, password: string, clientIp: string): Promise<AdminCreationResponse> {
-  console.log(`[ADMIN_CREATION] Starting atomic admin creation for ${email}`);
-  
-  let createdUserId: string | null = null;
-  
+async function withAdminCreationLock<T>(fn: () => Promise<T>): Promise<T> {
+  // Use advisory lock helpers (must always unlock)
+  await supabaseAdmin.rpc('lock_platform_admin_creation');
   try {
-    // Step 1: Create auth user with service role
-    console.log('[ADMIN_CREATION] Creating auth user...');
+    return await fn();
+  } finally {
+    await supabaseAdmin.rpc('unlock_platform_admin_creation');
+  }
+}
+
+// Main orchestrator using session state machine
+async function orchestrateAdminCreation(
+  email: string,
+  password: string,
+  clientIp: string,
+  requestUserId?: string
+): Promise<AdminCreationResponse> {
+  let createdUserId: string | null = null;
+  await createOrUpdateSession(email, clientIp, null, 'initiated', 'start');
+  try {
+    // Step A: Create user
+    await createOrUpdateSession(email, clientIp, null, 'initiated', 'create_user');
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
+      email,
+      password,
       email_confirm: true,
-      user_metadata: {
-        first_name: 'Platform',
-        last_name: 'Administrator'
-      }
+      user_metadata: { first_name: 'Platform', last_name: 'Administrator' }
     });
-
-    if (authError) {
-      console.error('[ADMIN_CREATION] Auth user creation failed:', authError);
-      throw new Error(`Failed to create user account: ${authError.message}`);
-    }
-
-    if (!authData.user) {
-      throw new Error('User creation succeeded but no user data returned');
-    }
-
+    if (authError) throw new Error(`Failed to create user account: ${authError.message}`);
+    if (!authData.user) throw new Error('User creation succeeded but no user data returned');
     createdUserId = authData.user.id;
-    console.log(`[ADMIN_CREATION] Auth user created successfully: ${createdUserId}`);
+    await createOrUpdateSession(email, clientIp, createdUserId, 'user_created', 'verify_profile');
 
-    // Step 2: Wait for profile creation trigger (give it a moment)
+    // Step B: Wait for profile creation trigger
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Verify profile was created by the trigger
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('id', createdUserId)
       .maybeSingle();
+    if (profileError) throw new Error('Profile creation verification failed');
+    if (!profileData) throw new Error('Profile was not created by database trigger');
+    await createOrUpdateSession(email, clientIp, createdUserId, 'profile_verified', 'assign_role');
 
-    if (profileError) {
-      console.error('[ADMIN_CREATION] Profile verification failed:', profileError);
-      throw new Error('Profile creation verification failed');
-    }
+    // Step C: Assign SUPER_ADMIN role
+    const { error: roleError } = await supabaseAdmin.rpc('assign_super_admin_role', { target_user_id: createdUserId });
+    if (roleError) throw new Error(`Failed to assign SUPER_ADMIN role: ${roleError.message}`);
+    await createOrUpdateSession(email, clientIp, createdUserId, 'role_assigned', 'audit');
 
-    if (!profileData) {
-      throw new Error('Profile was not created by database trigger');
-    }
-
-    console.log('[ADMIN_CREATION] Profile creation verified');
-
-    // Step 3: Assign SUPER_ADMIN role using database function
-    console.log('[ADMIN_CREATION] Assigning SUPER_ADMIN role...');
-    const { error: roleError } = await supabaseAdmin.rpc('assign_super_admin_role', {
-      target_user_id: createdUserId
-    });
-
-    if (roleError) {
-      console.error('[ADMIN_CREATION] Role assignment failed:', roleError);
-      throw new Error(`Failed to assign SUPER_ADMIN role: ${roleError.message}`);
-    }
-
-    console.log('[ADMIN_CREATION] SUPER_ADMIN role assigned successfully');
-
-    // Step 4: Audit logging
-    console.log('[ADMIN_CREATION] Creating audit log...');
+    // Step D: Write audit log
     const { error: auditError } = await supabaseAdmin
       .from('audit_logs')
       .insert({
@@ -150,19 +170,16 @@ async function createPlatformAdmin(email: string, password: string, clientIp: st
         resource_type: 'USER_ROLE',
         resource_id: createdUserId,
         details: {
-          email: email,
-          role: 'SUPER_ADMIN',
-          environment: ENVIRONMENT,
-          created_by: 'SYSTEM'
+          email,
+          role: 'SUPER_ADMIN', environment: ENVIRONMENT, created_by: requestUserId || 'SYSTEM'
         },
         ip_address: clientIp
       });
+    if (auditError) console.warn('[AUDIT] Logging failed:', auditError);
+    await createOrUpdateSession(email, clientIp, createdUserId, 'audit_logged', 'finish');
 
-    if (auditError) {
-      console.warn('[ADMIN_CREATION] Audit logging failed (non-critical):', auditError);
-    }
-
-    console.log(`[ADMIN_CREATION] Platform admin creation completed successfully for ${email}`);
+    // Step E: Mark session completed
+    await createOrUpdateSession(email, clientIp, createdUserId, 'completed', 'finish');
 
     return {
       success: true,
@@ -176,135 +193,97 @@ async function createPlatformAdmin(email: string, password: string, clientIp: st
         'Review security settings and permissions'
       ]
     };
-
-  } catch (error) {
-    console.error(`[ADMIN_CREATION] Admin creation failed:`, error);
-    
-    // Rollback: Delete auth user if it was created
+  } catch (error: any) {
+    await createOrUpdateSession(email, clientIp, createdUserId, 'failed', 'error', error?.message ?? String(error));
+    // Rollback auth user if created
     if (createdUserId) {
-      console.log(`[ADMIN_CREATION] Rolling back - deleting auth user ${createdUserId}`);
       try {
         await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-        console.log('[ADMIN_CREATION] Rollback successful - auth user deleted');
       } catch (rollbackError) {
-        console.error('[ADMIN_CREATION] Rollback failed - manual cleanup required:', rollbackError);
+        console.error('[ROLLBACK] Delete user failed:', rollbackError);
       }
     }
-
     throw error;
+  } finally {
+    // Optionally, clean up old sessions after success
+    // Not deleting on failure/logging purposes
   }
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
   const startTime = Date.now();
   const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  
-  console.log(`[ADMIN_CREATION] Request received from IP: ${clientIp}`);
 
   try {
-    // Rate limiting: 3 attempts per hour per IP
     if (RateLimiter.isRateLimited(`admin-creation:${clientIp}`, 3, 3600000)) {
       return RateLimiter.createRateLimitResponse(corsHeaders);
     }
-
-    // Enhanced security validation using permission middleware
     const validator = new PermissionValidator(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const authHeader = req.headers.get('Authorization');
-    
     const validation = await validator.validatePlatformAdmin(authHeader);
     if (!validation.isValid) {
       return validator.createErrorResponse(validation, corsHeaders);
     }
-
-    console.log(`[ADMIN_CREATION] Permission validation passed for user: ${validation.user?.email}`);
-
-    // Multi-layer security validation
-    console.log('[ADMIN_CREATION] Validating environment security...');
-    
-    // Layer 1: Environment protection
     const envValidation = validateEnvironment();
     if (!envValidation.valid) {
-      console.warn(`[ADMIN_CREATION] Environment validation failed: ${envValidation.message}`);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Operation not permitted in this environment' 
-        }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        JSON.stringify({ success: false, message: 'Operation not permitted in this environment' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Layer 2: Single admin enforcement
-    console.log('[ADMIN_CREATION] Checking for existing SUPER_ADMIN...');
-    const adminCheck = await checkExistingSuperAdmin();
-    if (adminCheck.exists) {
-      console.warn(`[ADMIN_CREATION] SUPER_ADMIN already exists (count: ${adminCheck.count})`);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Platform administrator already exists' 
-        }),
-        { 
-          status: 409, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Parse request body
-    const body: AdminCreationRequest = req.method === 'POST' ? await req.json() : {};
-    const email = body.email || DEFAULT_ADMIN_EMAIL;
-    const password = body.temporaryPassword || generateSecurePassword();
-
-    if (!email) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Admin email is required' 
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Create platform admin
-    const result = await createPlatformAdmin(email, password, clientIp);
-    
-    const duration = Date.now() - startTime;
-    console.log(`[ADMIN_CREATION] Total execution time: ${duration}ms`);
-
-    return new Response(
-      JSON.stringify(result),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    // Advisory lock for the entire admin creation operation (ensures serial execution)
+    return await withAdminCreationLock(async () => {
+      // Check one super admin rule
+      const adminCheck = await getExistingSuperAdmin();
+      if (adminCheck.exists) {
+        return new Response(
+          JSON.stringify({ success: false, message: 'Platform administrator already exists' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    );
-
+      // Parse request data
+      const body: AdminCreationRequest = req.method === 'POST' ? await req.json() : {};
+      const email = body.email || DEFAULT_ADMIN_EMAIL;
+      const password = body.temporaryPassword || generateSecurePassword();
+      if (!email) {
+        return new Response(
+          JSON.stringify({ success: false, message: 'Admin email is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Orchestrate creation with session state machine
+      try {
+        const result = await orchestrateAdminCreation(email, password, clientIp, validation.user?.id);
+        const duration = Date.now() - startTime;
+        console.log(`[ADMIN_CREATION] Success in ${duration}ms for email=${email}`);
+        return new Response(JSON.stringify(result), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error: any) {
+        const duration = Date.now() - startTime;
+        console.error(`[ADMIN_CREATION] Failed in ${duration}ms:`, error);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'Admin creation failed. Please check server logs for details.',
+            error: error?.message || String(error)
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    });
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`[ADMIN_CREATION] Operation failed after ${duration}ms:`, error);
-
-    // Security-conscious error response (no internal details)
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        message: 'Admin creation failed. Please check server logs for details.' 
+      JSON.stringify({
+        success: false,
+        message: 'Admin creation failed. Please check server logs for details.'
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
